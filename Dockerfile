@@ -1,0 +1,19 @@
+# Build stage
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o instawatch .
+
+# Runtime stage
+FROM alpine:3.21
+
+RUN apk add --no-cache python3 py3-pip ffmpeg \
+    && pip3 install --break-system-packages yt-dlp
+
+COPY --from=builder /app/instawatch /usr/local/bin/instawatch
+
+EXPOSE 8080
+CMD ["instawatch"]

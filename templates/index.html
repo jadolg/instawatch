@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaWatch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body class="landing">
+    <div class="landing-container">
+        <div class="logo-area">
+            <div class="logo-icon">▶</div>
+            <h1>InstaWatch</h1>
+            <p class="tagline">Watch Instagram videos without the noise.</p>
+        </div>
+
+        <form id="urlForm" class="url-form">
+            <div class="input-group">
+                <input type="url" id="igUrl" placeholder="Paste an Instagram reel or video URL…" autocomplete="off"
+                    required>
+                <button type="submit">
+                    <span class="btn-icon">▶</span>
+                    <span class="btn-text">Watch</span>
+                </button>
+            </div>
+        </form>
+
+        <div class="hint">
+            <p>Or prepend <code id="originHint"></code> to any Instagram URL</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('urlForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const url = document.getElementById('igUrl').value.trim();
+            if (url) {
+                window.location.href = '/' + url;
+            }
+        });
+
+        document.getElementById('originHint').textContent = window.location.origin + '/';
+    </script>
+</body>
+
+</html>
