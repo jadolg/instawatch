@@ -124,11 +124,14 @@
                 </ol>
                 <div class="cookie-input-group">
                     <input type="text" id="sessionIdInput" placeholder="Paste your sessionid here…" spellcheck="false">
-                    <button onclick="saveCookie()">Save</button>
+                    <button type="button" id="saveCookieBtn">Save</button>
                 </div>
                 <p class="instructions-note">⚠️ Keep this private — it grants access to your Instagram account.</p>
             `;
             cookieStatus.className = 'cookie-status instructions';
+
+            // Attach event listener to the save button
+            document.getElementById('saveCookieBtn').addEventListener('click', saveCookie);
         });
 
         function saveCookie() {
