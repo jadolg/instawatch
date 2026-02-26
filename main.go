@@ -99,7 +99,11 @@ func main() {
 		if err := os.WriteFile(cookieFile, []byte(content), 0600); err != nil {
 			log.Printf("Warning: could not write cookie file: %v", err)
 		} else {
-			log.Printf("Instagram session cookie written from INSTAGRAM_SESSION_ID")
+			masked := sessionID
+			if len(sessionID) > 8 {
+				masked = sessionID[:4] + strings.Repeat("*", len(sessionID)-8) + sessionID[len(sessionID)-4:]
+			}
+			log.Printf("Instagram session cookie written from INSTAGRAM_SESSION_ID (sessionid=%s)", masked)
 		}
 	}
 
@@ -193,6 +197,9 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
 	// Add cookies if available
 	if hasCookies() {
 		args = append(args, "--cookies", cookieFile)
+		log.Printf("Downloading with cookies: %s", igURL)
+	} else {
+		log.Printf("Downloading without cookies (no valid cookie file): %s", igURL)
 	}
 
 	args = append(args, igURL)
