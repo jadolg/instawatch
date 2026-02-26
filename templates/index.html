@@ -102,7 +102,14 @@
             });
 
         cookieBtn.addEventListener('click', function () {
-            // Show instructions immediately
+            // Toggle instructions visibility
+            if (cookieStatus.classList.contains('instructions')) {
+                cookieStatus.innerHTML = '';
+                cookieStatus.className = 'cookie-status';
+                return;
+            }
+
+            // Show instructions
             cookieStatus.innerHTML = `
                 <div class="instructions-header">
                     <strong>🔐 Get your Instagram session cookie</strong>
