@@ -126,7 +126,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	cache[urlHash] = videoPath
 	cacheMu.Unlock()
 
-	scheduleVideoDeletion(urlHash, videoPath, 1*time.Minute)
+	scheduleVideoDeletion(urlHash, videoPath, 1*time.Hour)
 
 	servePlayer(w, urlHash)
 }
