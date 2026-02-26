@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -93,6 +92,17 @@ func main() {
 	cookieFile = filepath.Join(dataDir, "cookies.txt")
 	log.Printf("Cookie file: %s", cookieFile)
 
+	// If INSTAGRAM_SESSION_ID is set, write (or overwrite) the cookie file at startup.
+	if sessionID := os.Getenv("INSTAGRAM_SESSION_ID"); sessionID != "" {
+		expiry := time.Now().Add(365 * 24 * time.Hour).Unix()
+		content := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t%d\tsessionid\t%s\n", expiry, sessionID)
+		if err := os.WriteFile(cookieFile, []byte(content), 0600); err != nil {
+			log.Printf("Warning: could not write cookie file: %v", err)
+		} else {
+			log.Printf("Instagram session cookie written from INSTAGRAM_SESSION_ID")
+		}
+	}
+
 	mux := http.NewServeMux()
 
 	mux.Handle("/static/", http.FileServer(http.FS(staticFiles)))
@@ -100,9 +110,6 @@ func main() {
 	mux.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		handleVideo(w, r, tmpDir)
 	})
-
-	mux.HandleFunc("/api/cookie", handleCookiePost)
-	mux.HandleFunc("/api/cookie/status", handleCookieStatus)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handleRoot(w, r, tmpDir)
@@ -240,60 +247,4 @@ func handleVideo(w http.ResponseWriter, r *http.Request, tmpDir string) {
 func hashURL(u string) string {
 	h := sha256.Sum256([]byte(u))
 	return hex.EncodeToString(h[:8])
-}
-
-func handleCookiePost(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Method not allowed"})
-		return
-	}
-
-	var req struct {
-		SessionID string `json:"sessionid"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Invalid JSON"})
-		return
-	}
-
-	if req.SessionID == "" {
-		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Missing sessionid"})
-		return
-	}
-
-	// Create Netscape cookie file format
-	// Format: domain	flag	path	secure	expiration	name	value
-	// Use a real expiration timestamp (1 year from now) so yt-dlp doesn't discard the cookie
-	expiry := time.Now().Add(365 * 24 * time.Hour).Unix()
-	cookieContent := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t%d\tsessionid\t%s\n", expiry, req.SessionID)
-
-	if err := os.WriteFile(cookieFile, []byte(cookieContent), 0600); err != nil {
-		log.Printf("Failed to write cookie file: %v", err)
-		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Failed to save cookie"})
-		return
-	}
-
-	log.Printf("Instagram cookie saved to %s", cookieFile)
-	json.NewEncoder(w).Encode(map[string]any{"success": true})
-}
-
-func handleCookieStatus(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	response := map[string]any{
-		"hasCookie": false,
-	}
-
-	if hasCookies() {
-		response["hasCookie"] = true
-		if info, err := os.Stat(cookieFile); err == nil {
-			response["savedAt"] = info.ModTime().Unix()
-		}
-	}
-
-	json.NewEncoder(w).Encode(response)
 }
