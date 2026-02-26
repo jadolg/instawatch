@@ -35,6 +35,10 @@
         </div>
 
         <div class="cookie-section">
+            <div class="cookie-indicator" id="cookieIndicator">
+                <span class="indicator-dot"></span>
+                <span class="indicator-text">Checking...</span>
+            </div>
             <button id="cookieBtn" class="cookie-btn">
                 <span class="cookie-icon">🍪</span>
                 <span class="cookie-text">Grab Instagram Cookie</span>
@@ -57,15 +61,44 @@
         // Cookie grabbing functionality
         const cookieBtn = document.getElementById('cookieBtn');
         const cookieStatus = document.getElementById('cookieStatus');
+        const cookieIndicator = document.getElementById('cookieIndicator');
+
+        function updateIndicator(hasCookie, savedAt) {
+            const text = cookieIndicator.querySelector('.indicator-text');
+
+            if (hasCookie) {
+                cookieIndicator.className = 'cookie-indicator has-cookie';
+                let statusText = 'Cookie stored';
+                if (savedAt) {
+                    const date = new Date(savedAt * 1000);
+                    const now = new Date();
+                    const diffMs = now - date;
+                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 0) {
+                        statusText += ' (saved today)';
+                    } else if (diffDays === 1) {
+                        statusText += ' (saved yesterday)';
+                    } else {
+                        statusText += ` (saved ${diffDays} days ago)`;
+                    }
+                }
+                text.textContent = statusText;
+            } else {
+                cookieIndicator.className = 'cookie-indicator no-cookie';
+                text.textContent = 'No cookie stored';
+            }
+        }
 
         // Check if cookie is already set
         fetch('/api/cookie/status')
             .then(r => r.json())
             .then(data => {
-                if (data.hasCookie) {
-                    cookieStatus.textContent = '✓ Cookie saved';
-                    cookieStatus.className = 'cookie-status success';
-                }
+                updateIndicator(data.hasCookie, data.savedAt);
+            })
+            .catch(() => {
+                cookieIndicator.className = 'cookie-indicator no-cookie';
+                cookieIndicator.querySelector('.indicator-text').textContent = 'Could not check status';
             });
 
         cookieBtn.addEventListener('click', function () {
@@ -108,6 +141,7 @@
                 if (data.success) {
                     cookieStatus.textContent = '✓ Cookie saved successfully!';
                     cookieStatus.className = 'cookie-status success';
+                    updateIndicator(true, Math.floor(Date.now() / 1000));
                 } else {
                     cookieStatus.textContent = '✗ Failed to save cookie: ' + data.error;
                     cookieStatus.className = 'cookie-status error';

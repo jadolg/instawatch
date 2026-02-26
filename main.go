@@ -261,12 +261,16 @@ func handleCookiePost(w http.ResponseWriter, r *http.Request) {
 func handleCookieStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	hasCookie := false
+	response := map[string]any{
+		"hasCookie": false,
+	}
+
 	if cookieFile != "" {
-		if _, err := os.Stat(cookieFile); err == nil {
-			hasCookie = true
+		if info, err := os.Stat(cookieFile); err == nil {
+			response["hasCookie"] = true
+			response["savedAt"] = info.ModTime().Unix()
 		}
 	}
 
-	json.NewEncoder(w).Encode(map[string]any{"hasCookie": hasCookie})
+	json.NewEncoder(w).Encode(response)
 }
