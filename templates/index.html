@@ -33,6 +33,14 @@
         <div class="hint">
             <p>Or prepend <code id="originHint"></code> to any Instagram URL</p>
         </div>
+
+        <div class="cookie-section">
+            <button id="cookieBtn" class="cookie-btn">
+                <span class="cookie-icon">🍪</span>
+                <span class="cookie-text">Grab Instagram Cookie</span>
+            </button>
+            <p class="cookie-status" id="cookieStatus"></p>
+        </div>
     </div>
 
     <script>
@@ -45,6 +53,71 @@
         });
 
         document.getElementById('originHint').textContent = window.location.origin + '/';
+
+        // Cookie grabbing functionality
+        const cookieBtn = document.getElementById('cookieBtn');
+        const cookieStatus = document.getElementById('cookieStatus');
+
+        // Check if cookie is already set
+        fetch('/api/cookie/status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.hasCookie) {
+                    cookieStatus.textContent = '✓ Cookie saved';
+                    cookieStatus.className = 'cookie-status success';
+                }
+            });
+
+        cookieBtn.addEventListener('click', function () {
+            // Show instructions immediately
+            cookieStatus.innerHTML = `
+                <div class="instructions-header">
+                    <strong>🔐 Get your Instagram session cookie</strong>
+                </div>
+                <ol class="instructions-list">
+                    <li>Open <a href="https://www.instagram.com/" target="_blank" rel="noopener">instagram.com</a> in a new tab and log in</li>
+                    <li>Press <kbd>F12</kbd> to open Developer Tools</li>
+                    <li>Click the <strong>Application</strong> tab (or <strong>Storage</strong> in Firefox)</li>
+                    <li>In the left sidebar, expand <strong>Cookies</strong> → click <strong>https://www.instagram.com</strong></li>
+                    <li>Find the row named <code>sessionid</code> and copy its <strong>Value</strong> (double-click to select)</li>
+                    <li>Paste it below and click Save</li>
+                </ol>
+                <div class="cookie-input-group">
+                    <input type="text" id="sessionIdInput" placeholder="Paste your sessionid here…" spellcheck="false">
+                    <button onclick="saveCookie()">Save</button>
+                </div>
+                <p class="instructions-note">⚠️ Keep this private — it grants access to your Instagram account.</p>
+            `;
+            cookieStatus.className = 'cookie-status instructions';
+        });
+
+        function saveCookie() {
+            const sessionId = document.getElementById('sessionIdInput').value.trim();
+            if (!sessionId) {
+                alert('Please paste the sessionid cookie value');
+                return;
+            }
+
+            fetch('/api/cookie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionid: sessionId })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    cookieStatus.textContent = '✓ Cookie saved successfully!';
+                    cookieStatus.className = 'cookie-status success';
+                } else {
+                    cookieStatus.textContent = '✗ Failed to save cookie: ' + data.error;
+                    cookieStatus.className = 'cookie-status error';
+                }
+            })
+            .catch(err => {
+                cookieStatus.textContent = '✗ Error: ' + err.message;
+                cookieStatus.className = 'cookie-status error';
+            });
+        }
     </script>
 </body>
 

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -25,8 +26,9 @@ var templateFiles embed.FS
 var templates *template.Template
 
 var (
-	cache   = make(map[string]string)
-	cacheMu sync.RWMutex
+	cache      = make(map[string]string)
+	cacheMu    sync.RWMutex
+	cookieFile string
 )
 
 func scheduleVideoDeletion(urlHash, videoPath string, delay time.Duration) {
@@ -55,6 +57,19 @@ func main() {
 	defer os.RemoveAll(tmpDir)
 	log.Printf("Video cache directory: %s", tmpDir)
 
+	// Set up persistent cookie storage
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		configDir = "."
+	}
+	instawatchDir := filepath.Join(configDir, "instawatch")
+	if err := os.MkdirAll(instawatchDir, 0700); err != nil {
+		log.Printf("Warning: could not create config directory: %v", err)
+		instawatchDir = "."
+	}
+	cookieFile = filepath.Join(instawatchDir, "cookies.txt")
+	log.Printf("Cookie file: %s", cookieFile)
+
 	mux := http.NewServeMux()
 
 	mux.Handle("/static/", http.FileServer(http.FS(staticFiles)))
@@ -62,6 +77,9 @@ func main() {
 	mux.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		handleVideo(w, r, tmpDir)
 	})
+
+	mux.HandleFunc("/api/cookie", handleCookiePost)
+	mux.HandleFunc("/api/cookie/status", handleCookieStatus)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handleRoot(w, r, tmpDir)
@@ -134,14 +152,24 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
 	outPath := filepath.Join(tmpDir, urlHash+".mp4")
 
-	cmd := exec.Command("yt-dlp",
+	args := []string{
 		"--no-warnings",
 		"--no-playlist",
 		"-f", "bv*+ba/b",
 		"--merge-output-format", "mp4",
 		"-o", outPath,
-		igURL,
-	)
+	}
+
+	// Add cookies if available
+	if cookieFile != "" {
+		if _, err := os.Stat(cookieFile); err == nil {
+			args = append(args, "--cookies", cookieFile)
+		}
+	}
+
+	args = append(args, igURL)
+
+	cmd := exec.Command("yt-dlp", args...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -191,4 +219,54 @@ func handleVideo(w http.ResponseWriter, r *http.Request, tmpDir string) {
 func hashURL(u string) string {
 	h := sha256.Sum256([]byte(u))
 	return hex.EncodeToString(h[:8])
+}
+
+func handleCookiePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		SessionID string `json:"sessionid"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Invalid JSON"})
+		return
+	}
+
+	if req.SessionID == "" {
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Missing sessionid"})
+		return
+	}
+
+	// Create Netscape cookie file format
+	// Format: domain	flag	path	secure	expiration	name	value
+	cookieContent := fmt.Sprintf(`# Netscape HTTP Cookie File
+.instagram.com	TRUE	/	TRUE	0	sessionid	%s
+`, req.SessionID)
+
+	if err := os.WriteFile(cookieFile, []byte(cookieContent), 0600); err != nil {
+		log.Printf("Failed to write cookie file: %v", err)
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Failed to save cookie"})
+		return
+	}
+
+	log.Printf("Instagram cookie saved to %s", cookieFile)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func handleCookieStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	hasCookie := false
+	if cookieFile != "" {
+		if _, err := os.Stat(cookieFile); err == nil {
+			hasCookie = true
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]any{"hasCookie": hasCookie})
 }
