@@ -58,16 +58,20 @@ func main() {
 	log.Printf("Video cache directory: %s", tmpDir)
 
 	// Set up persistent cookie storage
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		configDir = "."
+	// Use DATA_DIR env var if set (for Docker), otherwise use user config dir
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		configDir, err := os.UserConfigDir()
+		if err != nil {
+			configDir = "."
+		}
+		dataDir = filepath.Join(configDir, "instawatch")
 	}
-	instawatchDir := filepath.Join(configDir, "instawatch")
-	if err := os.MkdirAll(instawatchDir, 0700); err != nil {
-		log.Printf("Warning: could not create config directory: %v", err)
-		instawatchDir = "."
+	if err := os.MkdirAll(dataDir, 0700); err != nil {
+		log.Printf("Warning: could not create data directory: %v", err)
+		dataDir = "."
 	}
-	cookieFile = filepath.Join(instawatchDir, "cookies.txt")
+	cookieFile = filepath.Join(dataDir, "cookies.txt")
 	log.Printf("Cookie file: %s", cookieFile)
 
 	mux := http.NewServeMux()
@@ -222,8 +226,11 @@ func hashURL(u string) string {
 }
 
 func handleCookiePost(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "Method not allowed"})
 		return
 	}
 
@@ -254,7 +261,6 @@ func handleCookiePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Instagram cookie saved to %s", cookieFile)
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
 

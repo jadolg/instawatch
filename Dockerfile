@@ -15,5 +15,10 @@ RUN apk add --no-cache python3 py3-pip ffmpeg \
 
 COPY --from=builder /app/instawatch /usr/local/bin/instawatch
 
+# Create data directory for persistent storage (cookies, etc.)
+RUN mkdir -p /data && chmod 700 /data
+ENV DATA_DIR=/data
+VOLUME ["/data"]
+
 EXPOSE 8080
 CMD ["instawatch"]
