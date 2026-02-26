@@ -94,8 +94,7 @@ func main() {
 
 	// If INSTAGRAM_SESSION_ID is set, write (or overwrite) the cookie file at startup.
 	if sessionID := os.Getenv("INSTAGRAM_SESSION_ID"); sessionID != "" {
-		expiry := time.Now().Add(365 * 24 * time.Hour).Unix()
-		content := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t%d\tsessionid\t%s\n", expiry, sessionID)
+		content := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t0\tsessionid\t%s\n", sessionID)
 		if err := os.WriteFile(cookieFile, []byte(content), 0600); err != nil {
 			log.Printf("Warning: could not write cookie file: %v", err)
 		} else {
