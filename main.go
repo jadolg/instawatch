@@ -31,6 +31,25 @@ var (
 	cookieFile string
 )
 
+// hasCookies reports whether cookieFile exists and contains at least one
+// real cookie entry (i.e. a non-empty line that is not a comment).
+func hasCookies() bool {
+	if cookieFile == "" {
+		return false
+	}
+	data, err := os.ReadFile(cookieFile)
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			return true
+		}
+	}
+	return false
+}
+
 func scheduleVideoDeletion(urlHash, videoPath string, delay time.Duration) {
 	time.AfterFunc(delay, func() {
 		cacheMu.Lock()
@@ -165,10 +184,8 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
 	}
 
 	// Add cookies if available
-	if cookieFile != "" {
-		if _, err := os.Stat(cookieFile); err == nil {
-			args = append(args, "--cookies", cookieFile)
-		}
+	if hasCookies() {
+		args = append(args, "--cookies", cookieFile)
 	}
 
 	args = append(args, igURL)
@@ -250,9 +267,9 @@ func handleCookiePost(w http.ResponseWriter, r *http.Request) {
 
 	// Create Netscape cookie file format
 	// Format: domain	flag	path	secure	expiration	name	value
-	cookieContent := fmt.Sprintf(`# Netscape HTTP Cookie File
-.instagram.com	TRUE	/	TRUE	0	sessionid	%s
-`, req.SessionID)
+	// Use a real expiration timestamp (1 year from now) so yt-dlp doesn't discard the cookie
+	expiry := time.Now().Add(365 * 24 * time.Hour).Unix()
+	cookieContent := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t%d\tsessionid\t%s\n", expiry, req.SessionID)
 
 	if err := os.WriteFile(cookieFile, []byte(cookieContent), 0600); err != nil {
 		log.Printf("Failed to write cookie file: %v", err)
@@ -271,9 +288,9 @@ func handleCookieStatus(w http.ResponseWriter, r *http.Request) {
 		"hasCookie": false,
 	}
 
-	if cookieFile != "" {
+	if hasCookies() {
+		response["hasCookie"] = true
 		if info, err := os.Stat(cookieFile); err == nil {
-			response["hasCookie"] = true
 			response["savedAt"] = info.ModTime().Unix()
 		}
 	}
