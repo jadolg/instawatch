@@ -6,6 +6,8 @@ services:
     volumes:
       - instawatch-data:/data
     restart: unless-stopped
+    environment:
+      - INSTAGRAM_SESSION_ID=${INSTAGRAM_SESSION_ID}
 
 volumes:
   instawatch-data:
