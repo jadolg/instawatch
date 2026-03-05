@@ -92,11 +92,11 @@ func securityHeaders(next http.Handler) http.Handler {
 }
 
 func validateInstagramURL(raw string) (string, error) {
-	// Restore double-slashes collapsed by path routing.
+	// Double-slashes are collapsed by path routing.
 	raw = strings.Replace(raw, "https:/", httpsPrefix, 1)
 	raw = strings.Replace(raw, "http:/", httpPrefix, 1)
 
-	// Prepend scheme if missing so url.Parse works correctly.
+	// url.Parse works properly only when a scheme is present.
 	if !strings.HasPrefix(raw, httpPrefix) && !strings.HasPrefix(raw, httpsPrefix) {
 		raw = httpsPrefix + raw
 	}
@@ -106,12 +106,11 @@ func validateInstagramURL(raw string) (string, error) {
 		return "", fmt.Errorf("invalid URL")
 	}
 
-	// Enforce HTTPS only.
 	if u.Scheme != "https" {
 		return "", fmt.Errorf("only HTTPS Instagram URLs are accepted")
 	}
 
-	// Strict host allowlist — prevents SSRF via subdomains or query tricks.
+	// Prevents SSRF via subdomains or query tricks.
 	host := strings.ToLower(u.Hostname())
 	if !allowedInstagramHosts[host] {
 		return "", fmt.Errorf("not a valid Instagram URL")
@@ -299,7 +298,7 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate hash format to prevent path traversal and cache poisoning.
+	// Prevents path traversal and cache poisoning.
 	if !hashPattern.MatchString(urlHash) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -319,6 +318,6 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 
 func hashURL(u string) string {
 	h := sha256.Sum256([]byte(u))
-	// Use 16 bytes (32 hex chars) to reduce collision probability.
+	// Reduces collision probability.
 	return hex.EncodeToString(h[:16])
 }

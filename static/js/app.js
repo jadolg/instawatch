@@ -36,7 +36,7 @@ document.getElementById('originHint').textContent = window.location.origin + '/'
 
 window.addEventListener('pageshow', function (e) {
     if (e.persisted) {
-        // Reset state when restoring from bfcache (e.g. clicking the browser Back button)
+        // Restoring from bfcache (e.g. clicking the browser Back button)
         errorEl.hidden = true;
         loadEl.hidden = true;
         form.hidden = false;
