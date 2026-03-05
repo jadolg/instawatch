@@ -32,6 +32,12 @@ var (
 	cookieFile string
 )
 
+const (
+	httpsPrefix = "https://"
+	httpPrefix  = "http://"
+	videoRoute  = "/video/"
+)
+
 var allowedInstagramHosts = map[string]bool{
 	"instagram.com":     true,
 	"www.instagram.com": true,
@@ -47,7 +53,7 @@ func hasCookies() bool {
 	if err != nil {
 		return false
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "#") {
 			return true
@@ -87,12 +93,12 @@ func securityHeaders(next http.Handler) http.Handler {
 
 func validateInstagramURL(raw string) (string, error) {
 	// Restore double-slashes collapsed by path routing.
-	raw = strings.Replace(raw, "https:/", "https://", 1)
-	raw = strings.Replace(raw, "http:/", "http://", 1)
+	raw = strings.Replace(raw, "https:/", httpsPrefix, 1)
+	raw = strings.Replace(raw, "http:/", httpPrefix, 1)
 
 	// Prepend scheme if missing so url.Parse works correctly.
-	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
-		raw = "https://" + raw
+	if !strings.HasPrefix(raw, httpPrefix) && !strings.HasPrefix(raw, httpsPrefix) {
+		raw = httpsPrefix + raw
 	}
 
 	u, err := url.Parse(raw)
@@ -159,11 +165,9 @@ func main() {
 
 	mux.Handle("/static/", http.FileServer(http.FS(staticFiles)))
 
-	mux.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
-		handleVideo(w, r)
-	})
+	mux.HandleFunc("GET "+videoRoute+"{hash}", handleVideo)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		handleRoot(w, r, tmpDir)
 	})
 
@@ -283,7 +287,7 @@ func servePlayer(w http.ResponseWriter, urlHash string) {
 	data := struct {
 		VideoURL string
 	}{
-		VideoURL: "/video/" + urlHash,
+		VideoURL: videoRoute + urlHash,
 	}
 	if err := templates.ExecuteTemplate(w, "player.html", data); err != nil {
 		log.Printf("Error rendering player template: %v", err)
@@ -292,7 +296,7 @@ func servePlayer(w http.ResponseWriter, urlHash string) {
 }
 
 func handleVideo(w http.ResponseWriter, r *http.Request) {
-	urlHash := strings.TrimPrefix(r.URL.Path, "/video/")
+	urlHash := r.PathValue("hash")
 	if urlHash == "" {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
