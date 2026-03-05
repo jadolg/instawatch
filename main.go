@@ -8,9 +8,11 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +31,15 @@ var (
 	cacheMu    sync.RWMutex
 	cookieFile string
 )
+
+// allowedInstagramHosts is the strict allowlist of Instagram hostnames.
+var allowedInstagramHosts = map[string]bool{
+	"instagram.com":     true,
+	"www.instagram.com": true,
+}
+
+// hashPattern matches only valid URL hashes produced by hashURL (lowercase hex).
+var hashPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 // hasCookies reports whether cookieFile exists and contains at least one
 // real cookie entry (i.e. a non-empty line that is not a comment).
@@ -65,6 +76,49 @@ func scheduleVideoDeletion(urlHash, videoPath string, delay time.Duration) {
 
 func init() {
 	templates = template.Must(template.ParseFS(templateFiles, "templates/*.html"))
+}
+
+// securityHeaders wraps a handler and adds HTTP security headers to every response.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy",
+			"default-src 'self'; media-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// validateInstagramURL parses raw and returns a sanitised Instagram HTTPS URL,
+// or an error if the URL does not point to an allowed Instagram host.
+func validateInstagramURL(raw string) (string, error) {
+	// Restore double-slashes collapsed by path routing.
+	raw = strings.Replace(raw, "https:/", "https://", 1)
+	raw = strings.Replace(raw, "http:/", "http://", 1)
+
+	// Prepend scheme if missing so url.Parse works correctly.
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+		raw = "https://" + raw
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL")
+	}
+
+	// Enforce HTTPS only.
+	if u.Scheme != "https" {
+		return "", fmt.Errorf("only HTTPS Instagram URLs are accepted")
+	}
+
+	// Strict host allowlist — prevents SSRF via subdomains or query tricks.
+	host := strings.ToLower(u.Hostname())
+	if !allowedInstagramHosts[host] {
+		return "", fmt.Errorf("not a valid Instagram URL")
+	}
+
+	return u.String(), nil
 }
 
 func main() {
@@ -120,7 +174,7 @@ func main() {
 
 	addr := ":8080"
 	log.Printf("InstaWatch listening on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, securityHeaders(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -133,22 +187,16 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		return
 	}
 
-	igURL := strings.TrimPrefix(path, "/")
+	rawURL := strings.TrimPrefix(path, "/")
 
 	if r.URL.RawQuery != "" {
-		igURL += "?" + r.URL.RawQuery
+		rawURL += "?" + r.URL.RawQuery
 	}
 
-	igURL = strings.Replace(igURL, "https:/", "https://", 1)
-	igURL = strings.Replace(igURL, "http:/", "http://", 1)
-
-	if !strings.Contains(igURL, "instagram.com") {
-		http.Error(w, "Not a valid Instagram URL", http.StatusBadRequest)
+	igURL, err := validateInstagramURL(rawURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-
-	if !strings.HasPrefix(igURL, "http") {
-		igURL = "https://" + igURL
 	}
 
 	urlHash := hashURL(igURL)
@@ -168,8 +216,9 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	videoPath, err := downloadVideo(igURL, tmpDir, urlHash)
 	if err != nil {
+		// Log full error server-side but return a generic message to the client.
 		log.Printf("Error downloading video from %s: %v", igURL, err)
-		http.Error(w, fmt.Sprintf("Could not download video: %v", err), http.StatusInternalServerError)
+		http.Error(w, "Could not download video. Please check the URL and try again.", http.StatusInternalServerError)
 		return
 	}
 
@@ -238,6 +287,12 @@ func handleVideo(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		return
 	}
 
+	// Validate hash format to prevent path traversal and cache poisoning.
+	if !hashPattern.MatchString(urlHash) {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	cacheMu.RLock()
 	videoPath, exists := cache[urlHash]
 	cacheMu.RUnlock()
@@ -252,5 +307,6 @@ func handleVideo(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 func hashURL(u string) string {
 	h := sha256.Sum256([]byte(u))
-	return hex.EncodeToString(h[:8])
+	// Use 16 bytes (32 hex chars) to reduce collision probability.
+	return hex.EncodeToString(h[:16])
 }
