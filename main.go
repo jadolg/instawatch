@@ -26,8 +26,13 @@ var templateFiles embed.FS
 
 var templates *template.Template
 
+type videoInfo struct {
+	Path  string
+	Title string
+}
+
 var (
-	cache      = make(map[string]string)
+	cache      = make(map[string]videoInfo)
 	cacheMu    sync.RWMutex
 	cookieFile string
 )
@@ -211,12 +216,12 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	urlHash := hashURL(igURL)
 	cacheMu.RLock()
-	cachedPath, exists := cache[urlHash]
+	cachedVal, exists := cache[urlHash]
 	cacheMu.RUnlock()
 
 	if exists {
-		if _, err := os.Stat(cachedPath); err == nil {
-			servePlayer(w, urlHash)
+		if _, err := os.Stat(cachedVal.Path); err == nil {
+			servePlayer(w, urlHash, cachedVal.Title)
 			return
 		}
 		cacheMu.Lock()
@@ -224,7 +229,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		cacheMu.Unlock()
 	}
 
-	videoPath, err := downloadVideo(igURL, tmpDir, urlHash)
+	videoPath, title, err := downloadVideo(igURL, tmpDir, urlHash)
 	if err != nil {
 		log.Printf("Error downloading video from %s: %v", igURL, err)
 		renderIndex(w, http.StatusInternalServerError, "Could not download video. Please check the URL and try again.")
@@ -232,22 +237,24 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	}
 
 	cacheMu.Lock()
-	cache[urlHash] = videoPath
+	cache[urlHash] = videoInfo{Path: videoPath, Title: title}
 	cacheMu.Unlock()
 
 	scheduleVideoDeletion(urlHash, videoPath, 1*time.Hour)
 
-	servePlayer(w, urlHash)
+	servePlayer(w, urlHash, title)
 }
 
-func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
+func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 	outPath := filepath.Join(tmpDir, urlHash+".mp4")
+	titlePath := filepath.Join(tmpDir, urlHash+".title")
 
 	args := []string{
 		"--no-warnings",
 		"--no-playlist",
 		"-f", "bv*+ba/b",
 		"--merge-output-format", "mp4",
+		"--print-to-file", "%(title)s", titlePath,
 		"-o", outPath,
 	}
 
@@ -264,26 +271,42 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("yt-dlp failed: %w\nOutput: %s", err, string(output))
+		return "", "", fmt.Errorf("yt-dlp failed: %w\nOutput: %s", err, string(output))
 	}
 
 	matches, err := filepath.Glob(filepath.Join(tmpDir, urlHash+".*"))
 	if err != nil {
-		return "", fmt.Errorf("failed to search for output file: %w", err)
+		return "", "", fmt.Errorf("failed to search for output file: %w", err)
 	}
-	if len(matches) == 0 {
-		return "", fmt.Errorf("yt-dlp produced no output file")
+	var videoFile string
+	for _, m := range matches {
+		if filepath.Ext(m) != ".title" {
+			videoFile = m
+			break
+		}
+	}
+	if videoFile == "" {
+		return "", "", fmt.Errorf("yt-dlp produced no output file")
 	}
 
-	log.Printf("Downloaded video: %s", matches[0])
-	return matches[0], nil
+	titleBytes, err := os.ReadFile(titlePath)
+	title := "Video"
+	if err == nil {
+		title = strings.TrimSpace(string(titleBytes))
+		os.Remove(titlePath)
+	}
+
+	log.Printf("Downloaded video: %s (Title: %s)", videoFile, title)
+	return videoFile, title, nil
 }
 
-func servePlayer(w http.ResponseWriter, urlHash string) {
+func servePlayer(w http.ResponseWriter, urlHash, title string) {
 	data := struct {
 		VideoURL string
+		Title    string
 	}{
 		VideoURL: videoRoute + urlHash,
+		Title:    title,
 	}
 	if err := templates.ExecuteTemplate(w, "player.html", data); err != nil {
 		log.Printf("Error rendering player template: %v", err)
@@ -305,7 +328,7 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cacheMu.RLock()
-	videoPath, exists := cache[urlHash]
+	cachedVal, exists := cache[urlHash]
 	cacheMu.RUnlock()
 
 	if !exists {
@@ -313,7 +336,7 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, videoPath)
+	http.ServeFile(w, r, cachedVal.Path)
 }
 
 func hashURL(u string) string {
