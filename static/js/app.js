@@ -19,8 +19,21 @@ function showLoading() {
 
 form.addEventListener('submit', async function (e) {
     e.preventDefault();
-    const url = input.value.trim();
+    let url = input.value.trim();
     if (!url) return;
+
+    try {
+        let parseUrl = url;
+        if (!parseUrl.startsWith('http://') && !parseUrl.startsWith('https://')) {
+            parseUrl = 'https://' + parseUrl;
+        }
+        const parsedUrl = new URL(parseUrl);
+        parsedUrl.search = '';
+        parsedUrl.hash = '';
+        url = parsedUrl.toString();
+    } catch (e) {
+        // Let the backend validate if it's not a parsable URL
+    }
 
     showLoading();
 

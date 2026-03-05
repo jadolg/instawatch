@@ -121,6 +121,9 @@ func validateInstagramURL(raw string) (string, error) {
 		return "", fmt.Errorf("not a valid Instagram URL")
 	}
 
+	u.RawQuery = ""
+	u.Fragment = ""
+
 	return u.String(), nil
 }
 
@@ -205,7 +208,8 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	rawURL := strings.TrimPrefix(path, "/")
 
 	if r.URL.RawQuery != "" {
-		rawURL += "?" + r.URL.RawQuery
+		http.Redirect(w, r, path, http.StatusMovedPermanently)
+		return
 	}
 
 	igURL, err := validateInstagramURL(rawURL)
