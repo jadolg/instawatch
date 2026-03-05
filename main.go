@@ -83,7 +83,10 @@ func scheduleVideoDeletion(urlHash, videoPath string, delay time.Duration) {
 }
 
 func init() {
-	mime.AddExtensionType(".mp4", "video/mp4")
+	err := mime.AddExtensionType(".mp4", "video/mp4")
+	if err != nil {
+		log.Fatalf("Failed to add extension type: %v", err)
+	}
 	templates = template.Must(template.ParseFS(templateFiles, "templates/*.html"))
 }
 
@@ -303,7 +306,10 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 	faststartFile := filepath.Join(tmpDir, urlHash+"_fs.mp4")
 	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", videoFile, "-c", "copy", "-movflags", "faststart", faststartFile)
 	if err := ffmpegCmd.Run(); err == nil {
-		os.Remove(videoFile)
+		err := os.Remove(videoFile)
+		if err != nil {
+			log.Printf("Warning: could not remove temporary file: %v", err)
+		}
 		videoFile = faststartFile
 	} else {
 		log.Printf("Warning: ffmpeg faststart failed: %v", err)
@@ -313,7 +319,10 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 	title := "Video"
 	if err == nil {
 		title = strings.TrimSpace(string(titleBytes))
-		os.Remove(titlePath)
+		err := os.Remove(titlePath)
+		if err != nil {
+			log.Printf("Warning: could not remove temporary file: %v", err)
+		}
 	}
 
 	log.Printf("Downloaded video: %s (Title: %s)", videoFile, title)
