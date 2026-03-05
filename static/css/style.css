@@ -69,6 +69,14 @@ body {
 /* Logo */
 .logo-area {
     margin-bottom: 2.5rem;
+    display: block;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.logo-area:hover,
+.logo-area:focus {
+    text-decoration: none;
 }
 
 .logo-icon {
