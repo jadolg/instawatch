@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -82,6 +83,7 @@ func scheduleVideoDeletion(urlHash, videoPath string, delay time.Duration) {
 }
 
 func init() {
+	mime.AddExtensionType(".mp4", "video/mp4")
 	templates = template.Must(template.ParseFS(templateFiles, "templates/*.html"))
 }
 
@@ -257,7 +259,10 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 		"--no-warnings",
 		"--no-playlist",
 		"-f", "bv*+ba/b",
+		"-S", "vcodec:h264,res,acodec:m4a",
 		"--merge-output-format", "mp4",
+		"--remux-video", "mp4",
+		"--postprocessor-args", "ffmpeg:-movflags faststart",
 		"--print-to-file", "%(title)s", titlePath,
 		"-o", outPath,
 	}
@@ -291,6 +296,17 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 	}
 	if videoFile == "" {
 		return "", "", fmt.Errorf("yt-dlp produced no output file")
+	}
+
+	// iOS Safari requires the 'moov' atom at the beginning of the file.
+	// yt-dlp might skip post-processing if it doesn't remux, so we enforce it here.
+	faststartFile := filepath.Join(tmpDir, urlHash+"_fs.mp4")
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", videoFile, "-c", "copy", "-movflags", "faststart", faststartFile)
+	if err := ffmpegCmd.Run(); err == nil {
+		os.Remove(videoFile)
+		videoFile = faststartFile
+	} else {
+		log.Printf("Warning: ffmpeg faststart failed: %v", err)
 	}
 
 	titleBytes, err := os.ReadFile(titlePath)
