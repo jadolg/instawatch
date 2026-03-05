@@ -6,7 +6,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o instawatch .
 
-FROM alpine:3.21
+FROM alpine:3.23
 
 RUN apk add --no-cache python3 py3-pip ffmpeg \
     && pip3 install --break-system-packages yt-dlp
