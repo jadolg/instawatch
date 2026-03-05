@@ -7,12 +7,12 @@
     --text-secondary: #8888a0;
     --text-muted: #555568;
     --accent: #a855f7;
-    --accent-glow: rgba(168, 85, 247, 0.3);
+    --accent-glow: rgb(168 85 247 / 30%);
     --accent-hover: #c084fc;
-    --border: rgba(255, 255, 255, 0.06);
+    --border: rgb(255 255 255 / 6%);
     --radius: 12px;
     --radius-lg: 16px;
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font: 'Inter', -apple-system, blinkmacsystemfont, sans-serif;
 }
 
 *,
@@ -46,7 +46,7 @@ body {
     align-items: center;
     justify-content: center;
     background:
-        radial-gradient(ellipse at 50% 0%, rgba(168, 85, 247, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 0%, rgb(168 85 247 / 8%) 0%, transparent 60%),
         var(--bg-primary);
 }
 
@@ -85,14 +85,13 @@ body {
 }
 
 @keyframes pulse-glow {
-
     0%,
     100% {
         box-shadow: 0 0 30px var(--accent-glow);
     }
 
     50% {
-        box-shadow: 0 0 50px var(--accent-glow), 0 0 80px rgba(168, 85, 247, 0.15);
+        box-shadow: 0 0 50px var(--accent-glow), 0 0 80px rgb(168 85 247 / 15%);
     }
 }
 
@@ -101,9 +100,8 @@ body {
     font-weight: 700;
     letter-spacing: -0.04em;
     background: linear-gradient(135deg, var(--text-primary), var(--accent-hover));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .tagline {
@@ -128,8 +126,8 @@ body {
 }
 
 .input-group:focus-within {
-    border-color: rgba(168, 85, 247, 0.4);
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+    border-color: rgb(168 85 247 / 40%);
+    box-shadow: 0 0 0 3px rgb(168 85 247 / 10%);
 }
 
 .input-group input {
@@ -189,8 +187,8 @@ body {
 .inline-error {
     margin-top: 1rem;
     padding: 0.75rem 1rem;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgb(239 68 68 / 10%);
+    border: 1px solid rgb(239 68 68 / 30%);
     border-radius: var(--radius);
     color: #fca5a5;
     font-size: 0.88rem;
@@ -253,9 +251,8 @@ body {
     align-items: center;
     gap: 0.4rem;
     padding: 0.5rem 0.9rem;
-    background: rgba(10, 10, 15, 0.7);
+    background: rgb(10 10 15 / 70%);
     backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text-secondary);
@@ -270,7 +267,7 @@ body {
 
 .back-link:hover {
     color: var(--text-primary);
-    background: rgba(10, 10, 15, 0.9);
+    background: rgb(10 10 15 / 90%);
     opacity: 1;
 }
 
@@ -323,7 +320,7 @@ body {
 }
 
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
     .landing-container {
         padding: 1.5rem;
     }

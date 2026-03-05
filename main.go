@@ -162,11 +162,8 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-
-	mux.Handle("/static/", http.FileServer(http.FS(staticFiles)))
-
+	mux.Handle("GET /static/", http.FileServer(http.FS(staticFiles)))
 	mux.HandleFunc("GET "+videoRoute+"{hash}", handleVideo)
-
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		handleRoot(w, r, tmpDir)
 	})
