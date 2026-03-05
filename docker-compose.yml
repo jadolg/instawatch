@@ -2,7 +2,7 @@ services:
   instawatch:
     build: .
     ports:
-      - "18080:8080"
+      - "8080:8080"
     volumes:
       - instawatch-data:/data
     restart: unless-stopped
