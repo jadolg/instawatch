@@ -32,17 +32,13 @@ var (
 	cookieFile string
 )
 
-// allowedInstagramHosts is the strict allowlist of Instagram hostnames.
 var allowedInstagramHosts = map[string]bool{
 	"instagram.com":     true,
 	"www.instagram.com": true,
 }
 
-// hashPattern matches only valid URL hashes produced by hashURL (lowercase hex).
 var hashPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
-// hasCookies reports whether cookieFile exists and contains at least one
-// real cookie entry (i.e. a non-empty line that is not a comment).
 func hasCookies() bool {
 	if cookieFile == "" {
 		return false
@@ -78,7 +74,6 @@ func init() {
 	templates = template.Must(template.ParseFS(templateFiles, "templates/*.html"))
 }
 
-// securityHeaders wraps a handler and adds HTTP security headers to every response.
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy",
@@ -90,8 +85,6 @@ func securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// validateInstagramURL parses raw and returns a sanitised Instagram HTTPS URL,
-// or an error if the URL does not point to an allowed Instagram host.
 func validateInstagramURL(raw string) (string, error) {
 	// Restore double-slashes collapsed by path routing.
 	raw = strings.Replace(raw, "https:/", "https://", 1)
@@ -134,8 +127,6 @@ func main() {
 	}(tmpDir)
 	log.Printf("Video cache directory: %s", tmpDir)
 
-	// Set up persistent cookie storage
-	// Use DATA_DIR env var if set (for Docker), otherwise use user config dir
 	dataDir := os.Getenv("DATA_DIR")
 	if dataDir == "" {
 		configDir, err := os.UserConfigDir()
@@ -151,7 +142,6 @@ func main() {
 	cookieFile = filepath.Join(dataDir, "cookies.txt")
 	log.Printf("Cookie file: %s", cookieFile)
 
-	// If INSTAGRAM_SESSION_ID is set, write (or overwrite) the cookie file at startup.
 	if sessionID := os.Getenv("INSTAGRAM_SESSION_ID"); sessionID != "" {
 		content := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t0\tsessionid\t%s\n", sessionID)
 		if err := os.WriteFile(cookieFile, []byte(content), 0600); err != nil {
@@ -184,7 +174,6 @@ func main() {
 	}
 }
 
-// indexData holds the data passed to the index template.
 type indexData struct {
 	Error string
 }
@@ -237,7 +226,6 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	videoPath, err := downloadVideo(igURL, tmpDir, urlHash)
 	if err != nil {
-		// Log full error server-side but return a generic message to the client.
 		log.Printf("Error downloading video from %s: %v", igURL, err)
 		renderIndex(w, http.StatusInternalServerError, "Could not download video. Please check the URL and try again.")
 		return
@@ -263,7 +251,6 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
 		"-o", outPath,
 	}
 
-	// Add cookies if available
 	if hasCookies() {
 		args = append(args, "--cookies", cookieFile)
 		log.Printf("Downloading with cookies: %s", igURL)
