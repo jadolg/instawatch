@@ -179,11 +179,22 @@ func main() {
 	}
 }
 
+// indexData holds the data passed to the index template.
+type indexData struct {
+	Error string
+}
+
+func renderIndex(w http.ResponseWriter, status int, errMsg string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	templates.ExecuteTemplate(w, "index.html", indexData{Error: errMsg})
+}
+
 func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	path := r.URL.Path
 
 	if path == "/" {
-		templates.ExecuteTemplate(w, "index.html", nil)
+		templates.ExecuteTemplate(w, "index.html", indexData{})
 		return
 	}
 
@@ -195,7 +206,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	igURL, err := validateInstagramURL(rawURL)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		renderIndex(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -218,7 +229,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	if err != nil {
 		// Log full error server-side but return a generic message to the client.
 		log.Printf("Error downloading video from %s: %v", igURL, err)
-		http.Error(w, "Could not download video. Please check the URL and try again.", http.StatusInternalServerError)
+		renderIndex(w, http.StatusInternalServerError, "Could not download video. Please check the URL and try again.")
 		return
 	}
 

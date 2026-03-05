@@ -30,6 +30,14 @@
             </div>
         </form>
 
+        {{if .Error}}<p id="errorMsg" class="inline-error">{{.Error}}</p>{{else}}<p id="errorMsg" class="inline-error"
+            hidden></p>{{end}}
+
+        <div id="loadingState" class="loading-state" hidden>
+            <div class="spinner"></div>
+            <p>Fetching video…</p>
+        </div>
+
         <div class="hint">
             <p>Or prepend <code id="originHint"></code> to any Instagram URL</p>
         </div>
