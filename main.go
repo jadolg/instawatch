@@ -126,7 +126,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Printf("Warning: could not remove temporary directory: %v", err)
+		}
+	}(tmpDir)
 	log.Printf("Video cache directory: %s", tmpDir)
 
 	// Set up persistent cookie storage
@@ -187,14 +192,19 @@ type indexData struct {
 func renderIndex(w http.ResponseWriter, status int, errMsg string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	templates.ExecuteTemplate(w, "index.html", indexData{Error: errMsg})
+	if err := templates.ExecuteTemplate(w, "index.html", indexData{Error: errMsg}); err != nil {
+		log.Printf("Error rendering index template: %v", err)
+	}
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	path := r.URL.Path
 
 	if path == "/" {
-		templates.ExecuteTemplate(w, "index.html", indexData{})
+		if err := templates.ExecuteTemplate(w, "index.html", indexData{}); err != nil {
+			log.Printf("Error rendering index template: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -270,7 +280,10 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, error) {
 		return "", fmt.Errorf("yt-dlp failed: %w\nOutput: %s", err, string(output))
 	}
 
-	matches, _ := filepath.Glob(filepath.Join(tmpDir, urlHash+".*"))
+	matches, err := filepath.Glob(filepath.Join(tmpDir, urlHash+".*"))
+	if err != nil {
+		return "", fmt.Errorf("failed to search for output file: %w", err)
+	}
 	if len(matches) == 0 {
 		return "", fmt.Errorf("yt-dlp produced no output file")
 	}
@@ -285,9 +298,9 @@ func servePlayer(w http.ResponseWriter, urlHash string) {
 	}{
 		VideoURL: "/video/" + urlHash,
 	}
-	err := templates.ExecuteTemplate(w, "player.html", data)
-	if err != nil {
-		log.Println(err)
+	if err := templates.ExecuteTemplate(w, "player.html", data); err != nil {
+		log.Printf("Error rendering player template: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
