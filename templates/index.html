@@ -21,8 +21,9 @@
 
         <form id="urlForm" class="url-form">
             <div class="input-group">
+                <label for="igUrl" aria-label="Instagram URL"></label>
                 <input type="url" id="igUrl" placeholder="Paste an Instagram reel or video URL…" autocomplete="off"
-                    required>
+                    required aria-label="Instagram URL">
                 <button type="submit">
                     <span class="btn-icon">▶</span>
                     <span class="btn-text">Watch</span>
@@ -30,8 +31,7 @@
             </div>
         </form>
 
-        {{if .Error}}<p id="errorMsg" class="inline-error">{{.Error}}</p>{{else}}<p id="errorMsg" class="inline-error"
-            hidden></p>{{end}}
+        <p id="errorMsg" class="inline-error" {{if not .Error}}hidden{{end}}>{{.Error}}</p>
 
         <div id="loadingState" class="loading-state" hidden>
             <div class="spinner"></div>

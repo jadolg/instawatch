@@ -160,7 +160,7 @@ func main() {
 	mux.Handle("/static/", http.FileServer(http.FS(staticFiles)))
 
 	mux.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
-		handleVideo(w, r, tmpDir)
+		handleVideo(w, r)
 	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -291,7 +291,7 @@ func servePlayer(w http.ResponseWriter, urlHash string) {
 	}
 }
 
-func handleVideo(w http.ResponseWriter, r *http.Request, tmpDir string) {
+func handleVideo(w http.ResponseWriter, r *http.Request) {
 	urlHash := strings.TrimPrefix(r.URL.Path, "/video/")
 	if urlHash == "" {
 		http.Error(w, "Not found", http.StatusNotFound)
