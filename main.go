@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/rand/v2"
 	"mime"
 	"net/http"
 	"net/url"
@@ -258,10 +259,15 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 	outPath := filepath.Join(tmpDir, urlHash+".mp4")
 	titlePath := filepath.Join(tmpDir, urlHash+".title")
 
+	sleepReq := fmt.Sprintf("%.1f", 1.5+rand.Float64()*1.5) // Random float between 1.5s and 3.0s
+
 	args := []string{
 		"--no-warnings",
 		"--no-playlist",
 		"--impersonate", "Safari",
+		"--sleep-requests", sleepReq, // Pauses between API requests (JSON, HTML)
+		"--sleep-interval", "1", // Pauses before the MP4 stream
+		"--max-sleep-interval", "3",
 		"-f", "bv*+ba/b",
 		"-S", "vcodec:h264,res,acodec:m4a",
 		"--merge-output-format", "mp4",
