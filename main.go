@@ -261,6 +261,7 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 	args := []string{
 		"--no-warnings",
 		"--no-playlist",
+		"--impersonate", "Safari",
 		"-f", "bv*+ba/b",
 		"-S", "vcodec:h264,res,acodec:m4a",
 		"--merge-output-format", "mp4",
