@@ -21,7 +21,8 @@ var templateFiles embed.FS
 
 var templates *template.Template
 
-var cookieFile string
+var igCookieFile string
+var fbCookieFile string
 
 const (
 	httpsPrefix = "https://"
@@ -64,19 +65,28 @@ func main() {
 		log.Printf("Warning: could not create data directory: %v", err)
 		dataDir = "."
 	}
-	cookieFile = filepath.Join(dataDir, "cookies.txt")
-	log.Printf("Cookie file: %s", cookieFile)
+	igCookieFile = filepath.Join(dataDir, "ig_cookies.txt")
+	fbCookieFile = filepath.Join(dataDir, "fb_cookies.txt")
+	log.Printf("Instagram cookie file: %s", igCookieFile)
+	log.Printf("Facebook cookie file: %s", fbCookieFile)
 
 	if sessionID := os.Getenv("INSTAGRAM_SESSION_ID"); sessionID != "" {
 		content := fmt.Sprintf("# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t0\tsessionid\t%s\n", sessionID)
-		if err := os.WriteFile(cookieFile, []byte(content), 0600); err != nil {
-			log.Printf("Warning: could not write cookie file: %v", err)
+		if err := os.WriteFile(igCookieFile, []byte(content), 0600); err != nil {
+			log.Printf("Warning: could not write Instagram cookie file: %v", err)
 		} else {
-			masked := sessionID
-			if len(sessionID) > 8 {
-				masked = sessionID[:4] + strings.Repeat("*", len(sessionID)-8) + sessionID[len(sessionID)-4:]
-			}
+			masked := maskSessionID(sessionID)
 			log.Printf("Instagram session cookie written from INSTAGRAM_SESSION_ID (sessionid=%s)", masked)
+		}
+	}
+
+	if sessionID := os.Getenv("FACEBOOK_SESSION_ID"); sessionID != "" {
+		content := fmt.Sprintf("# Netscape HTTP Cookie File\n.facebook.com\tTRUE\t/\tTRUE\t0\txs\t%s\n", sessionID)
+		if err := os.WriteFile(fbCookieFile, []byte(content), 0600); err != nil {
+			log.Printf("Warning: could not write Facebook cookie file: %v", err)
+		} else {
+			masked := maskSessionID(sessionID)
+			log.Printf("Facebook session cookie written from FACEBOOK_SESSION_ID (xs=%s)", masked)
 		}
 	}
 
@@ -92,4 +102,11 @@ func main() {
 	if err := http.ListenAndServe(addr, securityHeaders(mux)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func maskSessionID(sessionID string) string {
+	if len(sessionID) <= 8 {
+		return sessionID
+	}
+	return sessionID[:4] + strings.Repeat("*", len(sessionID)-8) + sessionID[len(sessionID)-4:]
 }

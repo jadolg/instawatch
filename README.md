@@ -1,6 +1,6 @@
 # InstaWatch
 
-InstaWatch is a simple, self-hosted web application that allows you to watch Instagram videos directly from your browser. It securely downloads the video using [yt-dlp](https://github.com/yt-dlp/yt-dlp), optimizes the file format for seamless web playback across devices, and serves it through a clean, custom player.
+InstaWatch is a simple, self-hosted web application that allows you to watch Instagram and Facebook videos directly from your browser. It securely downloads the video using [yt-dlp](https://github.com/yt-dlp/yt-dlp), optimizes the file format for seamless web playback across devices, and serves it through a clean, custom player.
 
 ## Running with Docker Compose
 
@@ -20,13 +20,28 @@ git clone <repository_url>
 cd instawatch
 ```
 
-2. (Optional but recommended) If you want to configure an Instagram session cookie to avoid rate limits or download restricted videos, create a `.env` file in the root of the project:
+2. (Optional but recommended) If you want to configure session cookies to avoid rate limits or download restricted videos, create a `.env` file in the root of the project:
 
 ```text
 INSTAGRAM_SESSION_ID=your_sessionid_cookie_value
+FACEBOOK_SESSION_ID=your_xs_cookie_value
 ```
 
-You can find your session ID by inspecting the cookies of your browser when you are logged into Instagram.
+#### How to get session cookies
+
+**For Instagram:**
+1. Log in to Instagram in your web browser.
+2. Open Developer Tools (F12 or right-click > Inspect).
+3. Go to the **Application** tab (Chrome/Edge) or **Storage** tab (Firefox).
+4. Select **Cookies** and then `https://www.instagram.com`.
+5. Find the cookie named `sessionid` and copy its value.
+
+**For Facebook:**
+1. Log in to Facebook in your web browser.
+2. Open Developer Tools (F12 or right-click > Inspect).
+3. Go to the **Application** tab (Chrome/Edge) or **Storage** tab (Firefox).
+4. Select **Cookies** and then `https://www.facebook.com`.
+5. Find the cookie named `xs` and copy its value.
 
 3. Start the container in the background:
 
@@ -38,6 +53,6 @@ docker compose up -d
 
 ### Disclaimer
 
-This project is not affiliated with Instagram or any other social media platform. It is a simple, self-hosted web application that allows you to watch Instagram videos directly from your browser. It securely downloads the video using yt-dlp, optimizes the file format for seamless web playback across devices, and serves it through a clean, custom player.
+This project is not affiliated with Instagram, Facebook, or any other social media platform. It is a simple, self-hosted web application that allows you to watch Instagram and Facebook videos directly from your browser. It securely downloads the video using yt-dlp, optimizes the file format for seamless web playback across devices, and serves it through a clean, custom player.
 
 This project is not intended to be used for commercial purposes. It is intended to be used for personal purposes only.

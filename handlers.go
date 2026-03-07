@@ -38,13 +38,13 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		return
 	}
 
-	igURL, err := validateInstagramURL(rawURL)
+	videoURL, err := validateURL(rawURL)
 	if err != nil {
 		renderIndex(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	urlHash := hashURL(igURL)
+	urlHash := hashURL(videoURL)
 	cacheMu.RLock()
 	cachedVal, exists := cache[urlHash]
 	cacheMu.RUnlock()
@@ -59,9 +59,9 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		cacheMu.Unlock()
 	}
 
-	videoPath, title, err := downloadVideo(igURL, tmpDir, urlHash)
+	videoPath, title, err := downloadVideo(videoURL, tmpDir, urlHash)
 	if err != nil {
-		log.Printf("Error downloading video from %s: %v", igURL, err)
+		log.Printf("Error downloading video from %s: %v", videoURL, err)
 		renderIndex(w, http.StatusInternalServerError, "Could not download video. Please check the URL and try again.")
 		return
 	}
@@ -107,7 +107,7 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 	cacheMu.RUnlock()
 
 	if !exists {
-		http.Error(w, "Video not found — try loading the Instagram URL again", http.StatusNotFound)
+		http.Error(w, "Video not found — try loading the URL again", http.StatusNotFound)
 		return
 	}
 

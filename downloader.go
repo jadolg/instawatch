@@ -16,11 +16,18 @@ var allowedInstagramHosts = map[string]bool{
 	"www.instagram.com": true,
 }
 
-func hasCookies() bool {
-	if cookieFile == "" {
+var allowedFacebookHosts = map[string]bool{
+	"facebook.com":     true,
+	"www.facebook.com": true,
+	"fb.watch":         true,
+	"m.facebook.com":   true,
+}
+
+func hasCookies(file string) bool {
+	if file == "" {
 		return false
 	}
-	data, err := os.ReadFile(cookieFile)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return false
 	}
@@ -33,7 +40,7 @@ func hasCookies() bool {
 	return false
 }
 
-func validateInstagramURL(raw string) (string, error) {
+func validateURL(raw string) (string, error) {
 	// Double-slashes are collapsed by path routing.
 	if strings.HasPrefix(raw, "https:/") && !strings.HasPrefix(raw, httpsPrefix) {
 		raw = strings.Replace(raw, "https:/", httpsPrefix, 1)
@@ -54,22 +61,30 @@ func validateInstagramURL(raw string) (string, error) {
 	}
 
 	if u.Scheme != "https" {
-		return "", fmt.Errorf("only HTTPS Instagram URLs are accepted")
+		return "", fmt.Errorf("only HTTPS URLs are accepted")
 	}
 
 	// Prevents SSRF via subdomains or query tricks.
 	host := strings.ToLower(u.Hostname())
-	if !allowedInstagramHosts[host] {
-		return "", fmt.Errorf("not a valid Instagram URL")
+	isInstagram := allowedInstagramHosts[host]
+	isFacebook := allowedFacebookHosts[host]
+
+	if !isInstagram && !isFacebook {
+		return "", fmt.Errorf("not a supported URL")
 	}
 
-	u.RawQuery = ""
+	if isFacebook {
+		// Facebook watch?v=... needs the query parameter.
+		// Other FB/Instagram URLs might work without it, but let's keep it for FB.
+	} else {
+		u.RawQuery = ""
+	}
 	u.Fragment = ""
 
 	return u.String(), nil
 }
 
-func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
+func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
 	outPath := filepath.Join(tmpDir, urlHash+".mp4")
 	titlePath := filepath.Join(tmpDir, urlHash+".title")
 
@@ -91,14 +106,27 @@ func downloadVideo(igURL, tmpDir, urlHash string) (string, string, error) {
 		"-o", outPath,
 	}
 
-	if hasCookies() {
-		args = append(args, "--cookies", cookieFile)
-		log.Printf("Downloading with cookies: %s", igURL)
+	u, _ := url.Parse(videoURL)
+	host := strings.ToLower(u.Hostname())
+	isFacebook := allowedFacebookHosts[host]
+
+	if isFacebook {
+		if hasCookies(fbCookieFile) {
+			args = append(args, "--cookies", fbCookieFile)
+			log.Printf("Downloading Facebook video with cookies: %s", videoURL)
+		} else {
+			log.Printf("Downloading Facebook video without cookies: %s", videoURL)
+		}
 	} else {
-		log.Printf("Downloading without cookies (no valid cookie file): %s", igURL)
+		if hasCookies(igCookieFile) {
+			args = append(args, "--cookies", igCookieFile)
+			log.Printf("Downloading Instagram video with cookies: %s", videoURL)
+		} else {
+			log.Printf("Downloading Instagram video without cookies: %s", videoURL)
+		}
 	}
 
-	args = append(args, igURL)
+	args = append(args, videoURL)
 
 	cmd := exec.Command("yt-dlp", args...)
 
