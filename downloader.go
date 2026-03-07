@@ -93,7 +93,7 @@ func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
 	args := []string{
 		"--no-warnings",
 		"--no-playlist",
-		"--impersonate", "Safari",
+		"--impersonate", "Chrome",
 		"--sleep-requests", sleepReq, // Pauses between API requests (JSON, HTML)
 		"--sleep-interval", "1", // Pauses before the MP4 stream
 		"--max-sleep-interval", "3",
