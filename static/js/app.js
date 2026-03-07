@@ -1,5 +1,5 @@
 const form = document.getElementById('urlForm');
-const input = document.getElementById('igUrl');
+const input = document.getElementById('videoUrl');
 const errorEl = document.getElementById('errorMsg');
 const loadEl = document.getElementById('loadingState');
 
@@ -28,7 +28,12 @@ form.addEventListener('submit', async function (e) {
             parseUrl = 'https://' + parseUrl;
         }
         const parsedUrl = new URL(parseUrl);
-        parsedUrl.search = '';
+        const host = parsedUrl.hostname.toLowerCase();
+        const isFacebook = host.includes('facebook.com') || host.includes('fb.watch');
+
+        if (!isFacebook) {
+            parsedUrl.search = '';
+        }
         parsedUrl.hash = '';
         url = parsedUrl.toString();
     } catch (e) {
