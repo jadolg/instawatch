@@ -13,14 +13,15 @@ Running InstaWatch via Docker Compose is the easiest and recommended approach.
 
 ### Instructions
 
-1. Clone this repository to your local machine:
+1. Create a directory for InstaWatch and download the `docker-compose.yml` file:
 
 ```bash
-git clone <repository_url>
+mkdir instawatch
 cd instawatch
+curl -L https://raw.githubusercontent.com/jadolg/instawatch/main/docker-compose.yml -o docker-compose.yml
 ```
 
-2. (Optional but recommended) If you want to configure session cookies to avoid rate limits or download restricted videos, create a `.env` file in the root of the project:
+2. (Optional but recommended) If you want to configure session cookies to avoid rate limits or download restricted videos, create a `.env` file in the same directory:
 
 ```text
 INSTAGRAM_SESSION_ID=your_sessionid_cookie_value
