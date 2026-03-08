@@ -60,6 +60,10 @@ func validateURL(raw string) (string, error) {
 		return "", fmt.Errorf("invalid URL")
 	}
 
+	if strings.ContainsAny(raw, " \n\r\t\"'`$;|<>(){}") {
+		return "", fmt.Errorf("URL contains invalid characters")
+	}
+
 	if u.Scheme != "https" {
 		return "", fmt.Errorf("only HTTPS URLs are accepted")
 	}
@@ -126,7 +130,7 @@ func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
 		}
 	}
 
-	args = append(args, videoURL)
+	args = append(args, "--", videoURL)
 
 	cmd := exec.Command("yt-dlp", args...)
 
