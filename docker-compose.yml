@@ -1,6 +1,6 @@
 services:
   instawatch:
-    image: ghcr.io/jadolg/instawatch:latest
+    image: ghcr.io/jadolg/instawatch:v1
     ports:
       - "8080:8080"
     volumes:
