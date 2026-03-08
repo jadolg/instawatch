@@ -72,6 +72,32 @@ func TestValidateURL(t *testing.T) {
 			expectError: true,
 			errorMsg:    "not a supported URL",
 		},
+		{
+			name:        "semicolon in path is rejected",
+			raw:         "https://instagram.com/p/abc;ls",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "URL contains invalid characters",
+		},
+		{
+			name:        "semicolon in fragment is rejected",
+			raw:         "https://instagram.com/p/abc#;ls",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "URL contains invalid characters",
+		},
+		{
+			name:        "fragment is stripped",
+			raw:         "https://instagram.com/p/abc#fragment",
+			expected:    "https://instagram.com/p/abc",
+			expectError: false,
+		},
+		{
+			name:        "multiple fragments are stripped",
+			raw:         "https://instagram.com/p/abc#f1#f2",
+			expected:    "https://instagram.com/p/abc",
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
