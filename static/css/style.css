@@ -386,14 +386,13 @@ body.description-page {
         radial-gradient(ellipse at 50% 0%, rgb(168 85 247 / 8%) 0%, transparent 60%),
         var(--bg-primary);
     color: var(--text-primary);
-    padding: 2rem 2rem 8rem 2rem;
+    padding: 2rem;
     position: relative;
 }
 
 .description-container {
     max-width: 800px;
-    margin: 4rem auto 8rem auto;
-    /* 8rem margin at bottom */
+    margin: 4rem auto;
     background: var(--bg-surface);
     padding: 2.5rem;
     border-radius: var(--radius-lg);
@@ -447,4 +446,29 @@ body.description-page {
     color: var(--text-primary);
     background: var(--bg-surface-hover);
     transform: translateY(-1px);
+}
+
+@media (width <=600px) {
+    .description-page {
+        padding: 1rem;
+        padding-top: 4rem;
+    }
+
+    .description-container {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .description-title {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .description-content {
+        font-size: 1rem;
+    }
 }
