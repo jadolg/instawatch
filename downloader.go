@@ -88,9 +88,10 @@ func validateURL(raw string) (string, error) {
 	return u.String(), nil
 }
 
-func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
+func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, string, error) {
 	outPath := filepath.Join(tmpDir, urlHash+".mp4")
 	titlePath := filepath.Join(tmpDir, urlHash+".title")
+	descPath := filepath.Join(tmpDir, urlHash+".description")
 
 	sleepReq := fmt.Sprintf("%.1f", 1.5+rand.Float64()*1.5) // Random float between 1.5s and 3.0s
 
@@ -106,6 +107,7 @@ func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
 		"--merge-output-format", "mp4",
 		"--remux-video", "mp4",
 		"--postprocessor-args", "ffmpeg:-movflags faststart",
+		"--print-to-file", "%(description)s", descPath,
 		"--print-to-file", "%(title)s", titlePath,
 		"-o", outPath,
 	}
@@ -136,22 +138,22 @@ func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", "", fmt.Errorf("yt-dlp failed: %w\nOutput: %s", err, string(output))
+		return "", "", "", fmt.Errorf("yt-dlp failed: %w\nOutput: %s", err, string(output))
 	}
 
 	matches, err := filepath.Glob(filepath.Join(tmpDir, urlHash+".*"))
 	if err != nil {
-		return "", "", fmt.Errorf("failed to search for output file: %w", err)
+		return "", "", "", fmt.Errorf("failed to search for output file: %w", err)
 	}
 	var videoFile string
 	for _, m := range matches {
-		if filepath.Ext(m) != ".title" {
+		if filepath.Ext(m) != ".title" && filepath.Ext(m) != ".description" {
 			videoFile = m
 			break
 		}
 	}
 	if videoFile == "" {
-		return "", "", fmt.Errorf("yt-dlp produced no output file")
+		return "", "", "", fmt.Errorf("yt-dlp produced no output file")
 	}
 
 	// iOS Safari requires the 'moov' atom at the beginning of the file.
@@ -178,6 +180,19 @@ func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, error) {
 		}
 	}
 
+	descBytes, err := os.ReadFile(descPath)
+	description := ""
+	if err == nil {
+		description = strings.TrimSpace(string(descBytes))
+		if description == "NA" {
+			description = ""
+		}
+		err := os.Remove(descPath)
+		if err != nil {
+			log.Printf("Warning: could not remove temporary file: %v", err)
+		}
+	}
+
 	log.Printf("Downloaded video: %s (Title: %s)", videoFile, title)
-	return videoFile, title, nil
+	return videoFile, title, description, nil
 }

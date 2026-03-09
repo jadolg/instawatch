@@ -8,8 +8,10 @@ import (
 )
 
 type videoInfo struct {
-	Path  string
-	Title string
+	Path        string
+	Title       string
+	Description string
+	OriginalURL string
 }
 
 var (
