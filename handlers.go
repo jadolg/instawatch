@@ -51,7 +51,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	if exists {
 		if _, err := os.Stat(cachedVal.Path); err == nil {
-			servePlayer(w, urlHash, cachedVal.Title)
+			servePlayer(w, urlHash, cachedVal)
 			return
 		}
 		cacheMu.Lock()
@@ -59,7 +59,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		cacheMu.Unlock()
 	}
 
-	videoPath, title, err := downloadVideo(videoURL, tmpDir, urlHash)
+	videoPath, title, description, err := downloadVideo(videoURL, tmpDir, urlHash)
 	if err != nil {
 		log.Printf("Error downloading video from %s: %v", videoURL, err)
 		renderIndex(w, http.StatusInternalServerError, "Could not download video. Please check the URL and try again.")
@@ -67,21 +67,31 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	}
 
 	cacheMu.Lock()
-	cache[urlHash] = videoInfo{Path: videoPath, Title: title}
+	val := videoInfo{
+		Path:        videoPath,
+		Title:       title,
+		Description: description,
+		OriginalURL: rawURL,
+	}
+	cache[urlHash] = val
 	cacheMu.Unlock()
 
-	scheduleVideoDeletion(urlHash, videoPath, 1*time.Hour)
+	scheduleVideoDeletion(urlHash, videoPath, 24*time.Hour)
 
-	servePlayer(w, urlHash, title)
+	servePlayer(w, urlHash, val)
 }
 
-func servePlayer(w http.ResponseWriter, urlHash, title string) {
+func servePlayer(w http.ResponseWriter, urlHash string, info videoInfo) {
 	data := struct {
-		VideoURL string
-		Title    string
+		VideoURL       string
+		Title          string
+		HasDescription bool
+		DescriptionURL string
 	}{
-		VideoURL: videoRoute + urlHash,
-		Title:    title,
+		VideoURL:       videoRoute + urlHash,
+		Title:          info.Title,
+		HasDescription: info.Description != "",
+		DescriptionURL: "/description/" + urlHash,
 	}
 	if err := templates.ExecuteTemplate(w, "player.html", data); err != nil {
 		log.Printf("Error rendering player template: %v", err)
@@ -112,4 +122,40 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, cachedVal.Path)
+}
+
+func handleDescription(w http.ResponseWriter, r *http.Request) {
+	urlHash := r.PathValue("hash")
+	if urlHash == "" || !hashPattern.MatchString(urlHash) {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	cacheMu.RLock()
+	cachedVal, exists := cache[urlHash]
+	cacheMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "Description not found — try loading the URL again", http.StatusNotFound)
+		return
+	}
+
+	if cachedVal.Description == "" {
+		http.Error(w, "No description available", http.StatusNotFound)
+		return
+	}
+
+	data := struct {
+		Title       string
+		Description string
+		PlayerURL   string
+	}{
+		Title:       cachedVal.Title,
+		Description: cachedVal.Description,
+		PlayerURL:   "/" + cachedVal.OriginalURL,
+	}
+	if err := templates.ExecuteTemplate(w, "description.html", data); err != nil {
+		log.Printf("Error rendering description template: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }

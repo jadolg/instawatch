@@ -21,6 +21,13 @@
         <span>InstaWatch</span>
     </a>
 
+    {{if .HasDescription}}
+    <a href="{{.DescriptionURL}}" class="description-link" title="View Description">
+        <span class="description-icon">ℹ</span>
+        <span>Description</span>
+    </a>
+    {{end}}
+
     <script>
         const video = document.getElementById('videoPlayer');
 
