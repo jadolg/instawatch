@@ -1,68 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>InstaWatch - {{.Title}}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/static/css/style.css" />
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InstaWatch - {{.Title}}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
+    <body class="player-page">
+        <div class="player-container">
+            <video
+                id="videoPlayer"
+                src="{{.VideoURL}}"
+                controls
+                loop
+                playsinline
+            ></video>
+        </div>
 
-<body class="player-page">
-    <div class="player-container">
-        <video id="videoPlayer" src="{{.VideoURL}}" controls loop playsinline></video>
-    </div>
+        <a href="/" class="back-link" title="Back to InstaWatch">
+            <span class="back-icon">←</span>
+            <span>InstaWatch</span>
+        </a>
 
-    <a href="/" class="back-link" title="Back to InstaWatch">
-        <span class="back-icon">←</span>
-        <span>InstaWatch</span>
-    </a>
+        {{if .HasDescription}}
+        <a
+            href="{{.DescriptionURL}}"
+            class="description-link"
+            title="View Description"
+        >
+            <span class="description-icon">ℹ</span>
+            <span>Description</span>
+        </a>
+        {{end}}
 
-    {{if .HasDescription}}
-    <a href="{{.DescriptionURL}}" class="description-link" title="View Description">
-        <span class="description-icon">ℹ</span>
-        <span>Description</span>
-    </a>
-    {{end}}
+        <script>
+            const video = document.getElementById("videoPlayer");
 
-    <script>
-        const video = document.getElementById('videoPlayer');
+            document.addEventListener("keydown", function (e) {
+                switch (e.code) {
+                    case "Space":
+                        e.preventDefault();
+                        video.paused ? video.play() : video.pause();
+                        break;
+                    case "ArrowLeft":
+                        e.preventDefault();
+                        video.currentTime = Math.max(0, video.currentTime - 5);
+                        break;
+                    case "ArrowRight":
+                        e.preventDefault();
+                        video.currentTime = Math.min(
+                            video.duration,
+                            video.currentTime + 5,
+                        );
+                        break;
+                    case "KeyF":
+                        e.preventDefault();
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else {
+                            video.requestFullscreen();
+                        }
+                        break;
+                    case "KeyM":
+                        e.preventDefault();
+                        video.muted = !video.muted;
+                        break;
+                }
+            });
 
-        document.addEventListener('keydown', function (e) {
-            switch (e.code) {
-                case 'Space':
-                    e.preventDefault();
-                    video.paused ? video.play() : video.pause();
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    video.currentTime = Math.max(0, video.currentTime - 5);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    video.currentTime = Math.min(video.duration, video.currentTime + 5);
-                    break;
-                case 'KeyF':
-                    e.preventDefault();
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen();
-                    } else {
-                        video.requestFullscreen();
-                    }
-                    break;
-                case 'KeyM':
-                    e.preventDefault();
-                    video.muted = !video.muted;
-                    break;
-            }
-        });
-
-        video.addEventListener('error', function () {
-            const container = document.querySelector('.player-container');
-            container.innerHTML = `
+            video.addEventListener("error", function () {
+                const container = document.querySelector(".player-container");
+                container.innerHTML = `
                 <div class="error-state">
                     <div class="error-icon">⚠</div>
                     <h2>Couldn't load video</h2>
@@ -70,8 +85,7 @@
                     <a href="/" class="retry-link">Try another URL</a>
                 </div>
             `;
-        });
-    </script>
-</body>
-
+            });
+        </script>
+    </body>
 </html>

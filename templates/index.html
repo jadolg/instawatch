@@ -1,55 +1,80 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>InstaWatch</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/static/css/style.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css"
+        />
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InstaWatch</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
-</head>
+    <body class="landing">
+        <a
+            class="github-fork-ribbon"
+            href="https://github.com/jadolg/instawatch"
+            data-ribbon="Fork me on GitHub"
+            title="Fork me on GitHub"
+            >Fork me on GitHub</a
+        >
+        <div class="landing-container">
+            <a href="/" class="logo-area">
+                <div class="logo-icon">▶</div>
+                <h1>InstaWatch</h1>
+                <p class="tagline">
+                    Watch Instagram and Facebook videos without the noise.
+                </p>
+            </a>
 
-<body class="landing">
-    <a class="github-fork-ribbon" href="https://github.com/jadolg/instawatch" data-ribbon="Fork me on GitHub"
-        title="Fork me on GitHub">Fork me on GitHub</a>
-    <div class="landing-container">
-        <a href="/" class="logo-area">
-            <div class="logo-icon">▶</div>
-            <h1>InstaWatch</h1>
-            <p class="tagline">Watch Instagram and Facebook videos without the noise.</p>
-        </a>
+            <form id="urlForm" class="url-form">
+                <div class="input-group">
+                    <label for="videoUrl" aria-label="Video URL"></label>
+                    <input
+                        type="url"
+                        id="videoUrl"
+                        placeholder="Paste an Instagram or Facebook video URL…"
+                        autocomplete="off"
+                        required
+                        aria-label="Video URL"
+                    />
+                    <button type="submit">
+                        <span class="btn-icon">▶</span>
+                        <span class="btn-text">Watch</span>
+                    </button>
+                </div>
+            </form>
 
-        <form id="urlForm" class="url-form">
-            <div class="input-group">
-                <label for="videoUrl" aria-label="Video URL"></label>
-                <input type="url" id="videoUrl" placeholder="Paste an Instagram or Facebook video URL…"
-                    autocomplete="off" required aria-label="Video URL">
-                <button type="submit">
-                    <span class="btn-icon">▶</span>
-                    <span class="btn-text">Watch</span>
-                </button>
+            <p
+                id="errorMsg"
+                class="inline-error"
+                {{if
+                not
+                .Error}}hidden{{end}}
+            >
+                {{.Error}}
+            </p>
+
+            <div id="loadingState" class="loading-state" hidden>
+                <div class="spinner"></div>
+                <p>Fetching video…</p>
             </div>
-        </form>
 
-        <p id="errorMsg" class="inline-error" {{if not .Error}}hidden{{end}}>{{.Error}}</p>
-
-        <div id="loadingState" class="loading-state" hidden>
-            <div class="spinner"></div>
-            <p>Fetching video…</p>
+            <div class="hint">
+                <p>
+                    Or prepend <code id="originHint"></code> to any Instagram or
+                    Facebook URL
+                </p>
+            </div>
         </div>
 
-        <div class="hint">
-            <p>Or prepend <code id="originHint"></code> to any Instagram or Facebook URL</p>
-        </div>
-
-
-    </div>
-
-    <script src="/static/js/app.js" defer></script>
-</body>
-
+        <script src="/static/js/app.js" defer></script>
+    </body>
 </html>
