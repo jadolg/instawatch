@@ -31,6 +31,11 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 		return
 	}
 
+	if strings.HasPrefix(path, "//") {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
 	rawURL := strings.TrimPrefix(path, "/")
 
 	if r.URL.RawQuery != "" {
