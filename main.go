@@ -92,6 +92,11 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.FileServer(http.FS(staticFiles)))
+	mux.HandleFunc("GET /sw.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Service-Worker-Allowed", "/")
+		http.ServeFileFS(w, r, staticFiles, "static/sw.js")
+	})
 	mux.HandleFunc("GET "+videoRoute+"{hash}", handleVideo)
 	mux.HandleFunc("GET /description/{hash}", handleDescription)
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
