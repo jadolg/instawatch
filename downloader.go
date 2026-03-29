@@ -134,27 +134,53 @@ func downloadVideo(videoURL, tmpDir, urlHash string) (string, string, string, er
 
 	args = append(args, "--", videoURL)
 
-	cmd := exec.Command("yt-dlp", args...)
+	const maxAttempts = 3
+	var (
+		output    []byte
+		ytdlpErr  error
+		videoFile string
+	)
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		cmd := exec.Command("yt-dlp", args...)
+		output, ytdlpErr = cmd.CombinedOutput()
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", "", "", fmt.Errorf("yt-dlp failed: %w\nOutput: %s", err, string(output))
-	}
+		matches, err := filepath.Glob(filepath.Join(tmpDir, urlHash+".*"))
+		if err != nil {
+			return "", "", "", fmt.Errorf("failed to search for output file: %w", err)
+		}
+		videoFile = ""
+		for _, m := range matches {
+			ext := filepath.Ext(m)
+			if ext != ".title" && ext != ".description" && ext != ".part" {
+				videoFile = m
+				break
+			}
+		}
 
-	matches, err := filepath.Glob(filepath.Join(tmpDir, urlHash+".*"))
-	if err != nil {
-		return "", "", "", fmt.Errorf("failed to search for output file: %w", err)
-	}
-	var videoFile string
-	for _, m := range matches {
-		if filepath.Ext(m) != ".title" && filepath.Ext(m) != ".description" {
-			videoFile = m
+		if ytdlpErr == nil || videoFile != "" {
+			// Success or rename-race: file is present.
+			if ytdlpErr != nil {
+				log.Printf("Warning: yt-dlp exited with error but output file is present, continuing: %v\nOutput: %s", ytdlpErr, string(output))
+			}
 			break
 		}
+
+		log.Printf("yt-dlp attempt %d/%d failed: %v\nOutput: %s", attempt, maxAttempts, ytdlpErr, string(output))
+		if attempt < maxAttempts {
+			// Clean up any leftover .part file before retrying.
+			_ = os.Remove(filepath.Join(tmpDir, urlHash+".mp4.part"))
+			if partFiles, _ := filepath.Glob(filepath.Join(tmpDir, urlHash+".*.part")); len(partFiles) > 0 {
+				for _, pf := range partFiles {
+					_ = os.Remove(pf)
+				}
+			}
+		}
 	}
+
 	if videoFile == "" {
-		return "", "", "", fmt.Errorf("yt-dlp produced no output file")
+		return "", "", "", fmt.Errorf("yt-dlp failed after %d attempts: %w\nOutput: %s", maxAttempts, ytdlpErr, string(output))
 	}
+
 
 	// iOS Safari requires the 'moov' atom at the beginning of the file.
 	// yt-dlp might skip post-processing if it doesn't remux, so we enforce it here.
