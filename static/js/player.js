@@ -40,3 +40,46 @@ video.addEventListener("error", function () {
         </div>
     `;
 });
+
+// Copy link button
+(function () {
+    const btn = document.getElementById("copyLinkBtn");
+    const toast = document.getElementById("copyToast");
+    if (!btn) return;
+
+    let toastTimer = null;
+
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+    }
+
+    btn.addEventListener("click", async function () {
+        const url = window.location.href;
+        try {
+            await navigator.clipboard.writeText(url);
+            const icon = btn.querySelector(".copy-icon");
+            const orig = icon.textContent;
+            icon.textContent = "✓";
+            setTimeout(() => { icon.textContent = orig; }, 1500);
+            showToast("Link copied!");
+        } catch {
+            // Fallback for older browsers
+            const ta = document.createElement("textarea");
+            ta.value = url;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand("copy");
+                showToast("Link copied!");
+            } catch {
+                showToast("Copy failed — please copy the URL manually.");
+            }
+            document.body.removeChild(ta);
+        }
+    });
+}());
