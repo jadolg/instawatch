@@ -60,3 +60,7 @@ window.addEventListener('pageshow', function (e) {
         form.hidden = false;
     }
 });
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+}

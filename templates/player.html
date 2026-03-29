@@ -4,6 +4,12 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>InstaWatch - {{.Title}}</title>
+        <link rel="manifest" href="/static/manifest.json" />
+        <meta name="theme-color" content="#1a0533" />
+        <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -39,6 +45,13 @@
             <span>Description</span>
         </a>
         {{end}}
+
+        <button id="copyLinkBtn" class="copy-link-btn" title="Copy link">
+            <span class="copy-icon">⧉</span>
+            <span class="copy-link-label">Copy Link</span>
+        </button>
+
+        <div id="copyToast" class="copy-toast" aria-live="polite"></div>
 
         <script src="/static/js/player.js" defer></script>
     </body>
