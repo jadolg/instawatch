@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -89,11 +91,13 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 func servePlayer(w http.ResponseWriter, urlHash string, info videoInfo) {
 	data := struct {
 		VideoURL       string
+		DownloadURL    string
 		Title          string
 		HasDescription bool
 		DescriptionURL string
 	}{
 		VideoURL:       videoRoute + urlHash,
+		DownloadURL:    "/download/" + urlHash,
 		Title:          info.Title,
 		HasDescription: info.Description != "",
 		DescriptionURL: "/description/" + urlHash,
@@ -126,6 +130,28 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.ServeFile(w, r, cachedVal.Path)
+}
+
+func handleDownload(w http.ResponseWriter, r *http.Request) {
+	urlHash := r.PathValue("hash")
+	if urlHash == "" || !hashPattern.MatchString(urlHash) {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	cacheMu.RLock()
+	cachedVal, exists := cache[urlHash]
+	cacheMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "Video not found — try loading the URL again", http.StatusNotFound)
+		return
+	}
+
+	filename := filepath.Base(cachedVal.Path)
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
+	w.Header().Set("Content-Disposition", disposition)
 	http.ServeFile(w, r, cachedVal.Path)
 }
 

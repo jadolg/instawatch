@@ -98,6 +98,7 @@ func main() {
 		http.ServeFileFS(w, r, staticFiles, "static/sw.js")
 	})
 	mux.HandleFunc("GET "+videoRoute+"{hash}", handleVideo)
+	mux.HandleFunc("GET /download/{hash}", handleDownload)
 	mux.HandleFunc("GET /description/{hash}", handleDescription)
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		handleRoot(w, r, tmpDir)
