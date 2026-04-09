@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -23,6 +24,9 @@ var templates *template.Template
 
 var igCookieFile string
 var fbCookieFile string
+
+var ytdlpVersion string
+var curlCffiVersion string
 
 const (
 	httpsPrefix = "https://"
@@ -40,7 +44,23 @@ func init() {
 	templates = template.Must(template.ParseFS(templateFiles, "templates/*.html"))
 }
 
+func fetchVersions() {
+	if out, err := exec.Command("yt-dlp", "--version").Output(); err == nil {
+		ytdlpVersion = strings.TrimSpace(string(out))
+	} else {
+		ytdlpVersion = "unknown"
+	}
+	if out, err := exec.Command("python3", "-c", "import curl_cffi; print(curl_cffi.__version__)").Output(); err == nil {
+		curlCffiVersion = strings.TrimSpace(string(out))
+	} else {
+		curlCffiVersion = "unknown"
+	}
+	log.Printf("yt-dlp %s, curl_cffi %s", ytdlpVersion, curlCffiVersion)
+}
+
 func main() {
+	fetchVersions()
+
 	tmpDir, err := os.MkdirTemp("", "instawatch-*")
 	if err != nil {
 		log.Fatal(err)
