@@ -11,13 +11,15 @@ import (
 )
 
 type indexData struct {
-	Error string
+	Error           string
+	YtdlpVersion    string
+	CurlCffiVersion string
 }
 
 func renderIndex(w http.ResponseWriter, status int, errMsg string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	if err := templates.ExecuteTemplate(w, "index.html", indexData{Error: errMsg}); err != nil {
+	if err := templates.ExecuteTemplate(w, "index.html", indexData{Error: errMsg, YtdlpVersion: ytdlpVersion, CurlCffiVersion: curlCffiVersion}); err != nil {
 		log.Printf("Error rendering index template: %v", err)
 	}
 }
@@ -26,7 +28,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 	path := r.URL.Path
 
 	if path == "/" {
-		if err := templates.ExecuteTemplate(w, "index.html", indexData{}); err != nil {
+		if err := templates.ExecuteTemplate(w, "index.html", indexData{YtdlpVersion: ytdlpVersion, CurlCffiVersion: curlCffiVersion}); err != nil {
 			log.Printf("Error rendering index template: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}

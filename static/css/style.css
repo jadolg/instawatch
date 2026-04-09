@@ -224,6 +224,17 @@ body {
 }
 
 
+.version-footer {
+    position: fixed;
+    bottom: 1rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    pointer-events: none;
+}
+
 .player-page {
     display: flex;
     align-items: center;
