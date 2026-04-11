@@ -8,8 +8,9 @@ RUN CGO_ENABLED=0 go build -o instawatch .
 
 FROM alpine:3.23
 
+COPY requirements.txt .
 RUN apk add --no-cache python3 py3-pip ffmpeg \
-    && pip3 install --break-system-packages yt-dlp curl_cffi
+    && pip3 install --break-system-packages -r requirements.txt
 
 COPY --from=builder /app/instawatch /usr/local/bin/instawatch
 
