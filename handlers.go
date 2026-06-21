@@ -60,6 +60,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	if exists {
 		if _, err := os.Stat(cachedVal.Path); err == nil {
+			touchVideo(urlHash)
 			servePlayer(w, urlHash, cachedVal)
 			return
 		}
@@ -77,15 +78,14 @@ func handleRoot(w http.ResponseWriter, r *http.Request, tmpDir string) {
 
 	cacheMu.Lock()
 	val := videoInfo{
-		Path:        videoPath,
-		Title:       title,
-		Description: description,
-		OriginalURL: rawURL,
+		Path:         videoPath,
+		Title:        title,
+		Description:  description,
+		OriginalURL:  rawURL,
+		LastAccessed: time.Now(),
 	}
 	cache[urlHash] = val
 	cacheMu.Unlock()
-
-	scheduleVideoDeletion(urlHash, videoPath, 24*time.Hour)
 
 	servePlayer(w, urlHash, val)
 }
@@ -132,6 +132,7 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	touchVideo(urlHash)
 	http.ServeFile(w, r, cachedVal.Path)
 }
 
@@ -151,6 +152,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	touchVideo(urlHash)
 	filename := filepath.Base(cachedVal.Path)
 	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
 	w.Header().Set("Content-Disposition", disposition)

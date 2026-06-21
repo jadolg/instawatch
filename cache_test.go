@@ -7,48 +7,75 @@ import (
 	"time"
 )
 
-func TestScheduleVideoDeletion(t *testing.T) {
+func TestCleanupExpiredVideos(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	videoPath := filepath.Join(tmpDir, "test_video.mp4")
-	err := os.WriteFile(videoPath, []byte("dummy content"), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
+	freshPath := filepath.Join(tmpDir, "fresh.mp4")
+	stalePath := filepath.Join(tmpDir, "stale.mp4")
+	for _, p := range []string{freshPath, stalePath} {
+		if err := os.WriteFile(p, []byte("dummy content"), 0644); err != nil {
+			t.Fatalf("Failed to create temp file: %v", err)
+		}
 	}
 
-	urlHash := "test_hash"
+	retention := time.Hour
 
 	cacheMu.Lock()
-	cache[urlHash] = videoInfo{Path: videoPath, Title: "Test Video"}
+	cache["fresh_hash"] = videoInfo{Path: freshPath, LastAccessed: time.Now()}
+	cache["stale_hash"] = videoInfo{Path: stalePath, LastAccessed: time.Now().Add(-2 * retention)}
 	cacheMu.Unlock()
 
-	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		t.Fatalf("Temp file %s should exist before deletion", videoPath)
+	t.Cleanup(func() {
+		cacheMu.Lock()
+		delete(cache, "fresh_hash")
+		delete(cache, "stale_hash")
+		cacheMu.Unlock()
+	})
+
+	cleanupExpiredVideos(retention)
+
+	if _, err := os.Stat(stalePath); !os.IsNotExist(err) {
+		t.Fatalf("Stale video %s should have been deleted", stalePath)
+	}
+	cacheMu.RLock()
+	_, staleExists := cache["stale_hash"]
+	cacheMu.RUnlock()
+	if staleExists {
+		t.Fatalf("Stale cache entry should have been removed")
 	}
 
-	delay := 2 * time.Second
-	scheduleVideoDeletion(urlHash, videoPath, delay)
-
-	time.Sleep(1 * time.Second)
-	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		t.Fatalf("Temp file %s was deleted too early (before %v)", videoPath, delay)
+	if _, err := os.Stat(freshPath); err != nil {
+		t.Fatalf("Fresh video %s should not have been deleted: %v", freshPath, err)
 	}
+	cacheMu.RLock()
+	_, freshExists := cache["fresh_hash"]
+	cacheMu.RUnlock()
+	if !freshExists {
+		t.Fatalf("Fresh cache entry should have been kept")
+	}
+}
+
+func TestTouchVideo(t *testing.T) {
+	urlHash := "touch_hash"
+	old := time.Now().Add(-time.Hour)
+
+	cacheMu.Lock()
+	cache[urlHash] = videoInfo{Path: "/tmp/whatever.mp4", LastAccessed: old}
+	cacheMu.Unlock()
+
+	t.Cleanup(func() {
+		cacheMu.Lock()
+		delete(cache, urlHash)
+		cacheMu.Unlock()
+	})
+
+	touchVideo(urlHash)
 
 	cacheMu.RLock()
-	if _, exists := cache[urlHash]; !exists {
-		t.Fatalf("Cache entry for %s was deleted too early", urlHash)
-	}
+	updated := cache[urlHash].LastAccessed
 	cacheMu.RUnlock()
 
-	time.Sleep(1500 * time.Millisecond)
-
-	if _, err := os.Stat(videoPath); !os.IsNotExist(err) {
-		t.Fatalf("Temp file %s was not deleted after %v", videoPath, delay)
+	if !updated.After(old) {
+		t.Fatalf("touchVideo did not refresh LastAccessed: got %v, want after %v", updated, old)
 	}
-
-	cacheMu.RLock()
-	if _, exists := cache[urlHash]; exists {
-		t.Fatalf("Cache entry for %s was not deleted after %v", urlHash, delay)
-	}
-	cacheMu.RUnlock()
 }

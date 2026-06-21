@@ -110,6 +110,8 @@ func main() {
 		}
 	}
 
+	startCacheJanitor(janitorInterval, videoRetention)
+
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.FileServer(http.FS(staticFiles)))
 	mux.HandleFunc("GET /sw.js", func(w http.ResponseWriter, r *http.Request) {
