@@ -13,13 +13,16 @@ FROM cgr.dev/chainguard/wolfi-base AS ffmpeg
 RUN apk add --no-cache build-base nasm pkgconf wget xz zlib-dev
 
 ARG FFMPEG_VERSION=7.1.1
-ARG FFMPEG_SHA256=733984395e0dbbe5c046abda2dc49a5544e7e0e1e2366bba849222ae9e3a03b1
+# ffmpeg.org's own download server intermittently refuses/times out connections
+# from GitHub Actions runners, which broke a release build. GitHub's mirror of
+# the FFmpeg repo shares GitHub's infra and has been far more reliable in CI.
+ARG FFMPEG_SHA256=f117507dc501f2a6c11f9241d8d0c3213846cfad91764361af37befd6b6c523d
 
-RUN wget -q --tries=5 --timeout=30 --retry-connrefused -O /tmp/ffmpeg.tar.xz \
-      "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
-    && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c - \
+RUN wget -q --tries=5 --timeout=30 --retry-connrefused -O /tmp/ffmpeg.tar.gz \
+      "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz" \
+    && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.gz" | sha256sum -c - \
     && mkdir -p /tmp/src \
-    && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/src --strip-components=1
+    && tar -xf /tmp/ffmpeg.tar.gz -C /tmp/src --strip-components=1
 
 WORKDIR /tmp/src
 RUN ./configure \
