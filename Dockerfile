@@ -6,21 +6,13 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o instawatch .
 
-# ffmpeg has no runtime-only Chainguard image on the free tier, and the wolfi apk
-# package pulls in ~190MB of encoder libraries (x264/x265/aom/svt-av1/opus/...)
-# that this app never uses: downloader.go only ever stream-copies ("-c copy"),
-# it never transcodes. So build a minimal ffmpeg from source instead, with no
-# --enable-lib* flags, which keeps every native demuxer/muxer/decoder (plenty
-# for remuxing whatever Instagram/Facebook serve) but drops all those optional
-# encoder dependencies. --disable-network is safe (ffmpeg only ever touches
-# local temp files here) and shrinks the attack surface further.
+# Built from source with no --enable-lib* flags: downloader.go only ever
+# stream-copies, so the external encoder libs the wolfi apk package pulls in
+# (x264, x265, aom, srt, ssh, zeromq, ...) aren't needed.
 FROM cgr.dev/chainguard/wolfi-base AS ffmpeg
 RUN apk add --no-cache build-base nasm pkgconf wget xz zlib-dev
 
 ARG FFMPEG_VERSION=7.1.1
-# Self-pinned from the official https://ffmpeg.org/releases/ download (no
-# published sha256sum file upstream, only a GPG .asc signature) to catch
-# corruption/tampering on rebuilds.
 ARG FFMPEG_SHA256=733984395e0dbbe5c046abda2dc49a5544e7e0e1e2366bba849222ae9e3a03b1
 
 RUN wget -q -O /tmp/ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
