@@ -38,6 +38,9 @@ jobs:
             exit 1
           fi
 
+      - name: End-to-end test (download a real Instagram reel)
+        run: ./scripts/e2e-smoke-test.sh instawatch:test-amd64
+
   docker-arm64:
     name: Build Docker image (arm64)
     runs-on: ubuntu-24.04-arm
@@ -68,3 +71,6 @@ jobs:
             echo "::error::no curl_cffi-backed impersonate targets found"
             exit 1
           fi
+
+      - name: End-to-end test (download a real Instagram reel)
+        run: ./scripts/e2e-smoke-test.sh instawatch:test-arm64
