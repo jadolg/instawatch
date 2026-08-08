@@ -22,8 +22,21 @@ jobs:
           tags: instawatch:test-amd64
           platforms: linux/amd64
           push: false
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Verify yt-dlp impersonation backend (curl_cffi compatibility)
+        run: |
+          docker run --rm --entrypoint yt-dlp instawatch:test-amd64 --list-impersonate-targets | tee targets.txt
+          if grep -qi "unavailable" targets.txt; then
+            echo "::error::yt-dlp impersonate targets are unavailable - curl_cffi version in requirements.txt is likely incompatible with the pinned yt-dlp version"
+            exit 1
+          fi
+          if ! grep -q "curl_cffi" targets.txt; then
+            echo "::error::no curl_cffi-backed impersonate targets found"
+            exit 1
+          fi
 
   docker-arm64:
     name: Build Docker image (arm64)
@@ -40,5 +53,18 @@ jobs:
           tags: instawatch:test-arm64
           platforms: linux/arm64
           push: false
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Verify yt-dlp impersonation backend (curl_cffi compatibility)
+        run: |
+          docker run --rm --entrypoint yt-dlp instawatch:test-arm64 --list-impersonate-targets | tee targets.txt
+          if grep -qi "unavailable" targets.txt; then
+            echo "::error::yt-dlp impersonate targets are unavailable - curl_cffi version in requirements.txt is likely incompatible with the pinned yt-dlp version"
+            exit 1
+          fi
+          if ! grep -q "curl_cffi" targets.txt; then
+            echo "::error::no curl_cffi-backed impersonate targets found"
+            exit 1
+          fi
