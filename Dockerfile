@@ -6,21 +6,55 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o instawatch .
 
-FROM alpine:3.24
+# Built from source with no --enable-lib* flags: downloader.go only ever
+# stream-copies, so the external encoder libs the wolfi apk package pulls in
+# (x264, x265, aom, srt, ssh, zeromq, ...) aren't needed.
+FROM cgr.dev/chainguard/wolfi-base AS ffmpeg
+RUN apk add --no-cache build-base nasm pkgconf wget xz zlib-dev
 
+ARG FFMPEG_VERSION=7.1.1
+ARG FFMPEG_SHA256=733984395e0dbbe5c046abda2dc49a5544e7e0e1e2366bba849222ae9e3a03b1
+
+RUN wget -q --tries=5 --timeout=30 --retry-connrefused -O /tmp/ffmpeg.tar.xz \
+      "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+    && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c - \
+    && mkdir -p /tmp/src \
+    && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/src --strip-components=1
+
+WORKDIR /tmp/src
+RUN ./configure \
+      --prefix=/opt/ffmpeg \
+      --disable-static --enable-shared \
+      --disable-doc --disable-debug \
+      --disable-avdevice \
+      --disable-network \
+      --disable-ffplay \
+      --disable-postproc \
+    && make -j"$(nproc)" \
+    && make install \
+    && mkdir -p /data-empty
+
+FROM cgr.dev/chainguard/python:latest-dev AS pydeps
+USER root
+WORKDIR /app
 COPY requirements.txt .
-RUN apk add --no-cache python3 py3-pip ffmpeg \
-    && pip3 install --break-system-packages -r requirements.txt
+RUN python -m venv /venv \
+    && /venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && /venv/bin/python -m pip uninstall -y pip setuptools
+
+FROM cgr.dev/chainguard/python:latest
+
+COPY --from=ffmpeg /opt/ffmpeg/lib/*.so* /usr/lib/
+COPY --from=ffmpeg /opt/ffmpeg/bin/ffmpeg /opt/ffmpeg/bin/ffprobe /usr/bin/
+
+COPY --from=pydeps /venv /venv
+ENV PATH="/venv/bin:${PATH}"
 
 COPY --from=builder /app/instawatch /usr/local/bin/instawatch
+COPY --from=ffmpeg --chown=nonroot:nonroot --chmod=700 /data-empty /data
 
-RUN adduser -D -u 1000 instawatch \
-    && mkdir -p /data \
-    && chown instawatch:instawatch /data \
-    && chmod 700 /data
 ENV DATA_DIR=/data
 VOLUME ["/data"]
 
-USER instawatch
 EXPOSE 8080
-CMD ["instawatch"]
+ENTRYPOINT ["instawatch"]
