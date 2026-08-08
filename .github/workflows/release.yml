@@ -41,6 +41,10 @@ jobs:
         with:
           images: |
             ${{ env.IMAGE_NAME }}
+          labels: |
+            org.opencontainers.image.authors=Jorge Alberto Díaz Orozco (Akiel)
+            org.opencontainers.image.vendor=jadolg
+            org.opencontainers.image.documentation=https://github.com/jadolg/instawatch#readme
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v7
