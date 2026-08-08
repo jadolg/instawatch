@@ -10,6 +10,18 @@ services:
     environment:
       - INSTAGRAM_SESSION_ID=${INSTAGRAM_SESSION_ID}
       - FACEBOOK_SESSION_ID=${FACEBOOK_SESSION_ID}
+    labels:
+      - wud.watch=true
+
+  wud:
+    image: getwud/wud
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=false
+      - WUD_TRIGGER_DOCKER_LOCAL_AUTO=true
+      - WUD_TRIGGER_DOCKER_LOCAL_PRUNE=true
 
 volumes:
   instawatch-data:
