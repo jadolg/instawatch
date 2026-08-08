@@ -15,7 +15,8 @@ RUN apk add --no-cache build-base nasm pkgconf wget xz zlib-dev
 ARG FFMPEG_VERSION=7.1.1
 ARG FFMPEG_SHA256=733984395e0dbbe5c046abda2dc49a5544e7e0e1e2366bba849222ae9e3a03b1
 
-RUN wget -q -O /tmp/ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+RUN wget -q --tries=5 --timeout=30 --retry-connrefused -O /tmp/ffmpeg.tar.xz \
+      "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
     && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c - \
     && mkdir -p /tmp/src \
     && tar -xf /tmp/ffmpeg.tar.xz -C /tmp/src --strip-components=1
