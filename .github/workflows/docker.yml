@@ -25,14 +25,18 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Save image
-        run: docker save instawatch:test-amd64 -o /tmp/image-amd64.tar
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-amd64
-          path: /tmp/image-amd64.tar
-          retention-days: 1
+
+      - name: Verify yt-dlp impersonation backend (curl_cffi compatibility)
+        run: |
+          docker run --rm --entrypoint yt-dlp instawatch:test-amd64 --list-impersonate-targets | tee targets.txt
+          if grep -qi "unavailable" targets.txt; then
+            echo "::error::yt-dlp impersonate targets are unavailable - curl_cffi version in requirements.txt is likely incompatible with the pinned yt-dlp version"
+            exit 1
+          fi
+          if ! grep -q "curl_cffi" targets.txt; then
+            echo "::error::no curl_cffi-backed impersonate targets found"
+            exit 1
+          fi
 
   docker-arm64:
     name: Build Docker image (arm64)
@@ -52,46 +56,15 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Save image
-        run: docker save instawatch:test-arm64 -o /tmp/image-arm64.tar
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-arm64
-          path: /tmp/image-arm64.tar
-          retention-days: 1
 
-  verify-impersonation:
-    name: Verify yt-dlp impersonation backend (curl_cffi compatibility)
-    needs: [ docker-amd64, docker-arm64 ]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Download image artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: /tmp/images
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Load images
+      - name: Verify yt-dlp impersonation backend (curl_cffi compatibility)
         run: |
-          docker load -i /tmp/images/image-amd64/image-amd64.tar
-          docker load -i /tmp/images/image-arm64/image-arm64.tar
-      - name: Check impersonate targets
-        run: |
-          check() {
-            local tag="$1"
-            echo "== Checking $tag =="
-            docker run --rm --entrypoint yt-dlp "$tag" --list-impersonate-targets | tee targets.txt
-            if grep -qi "unavailable" targets.txt; then
-              echo "::error::yt-dlp impersonate targets are unavailable on $tag - curl_cffi version in requirements.txt is likely incompatible with the pinned yt-dlp version"
-              exit 1
-            fi
-            if ! grep -q "curl_cffi" targets.txt; then
-              echo "::error::no curl_cffi-backed impersonate targets found on $tag"
-              exit 1
-            fi
-          }
-          check instawatch:test-amd64
-          check instawatch:test-arm64
+          docker run --rm --entrypoint yt-dlp instawatch:test-arm64 --list-impersonate-targets | tee targets.txt
+          if grep -qi "unavailable" targets.txt; then
+            echo "::error::yt-dlp impersonate targets are unavailable - curl_cffi version in requirements.txt is likely incompatible with the pinned yt-dlp version"
+            exit 1
+          fi
+          if ! grep -q "curl_cffi" targets.txt; then
+            echo "::error::no curl_cffi-backed impersonate targets found"
+            exit 1
+          fi
