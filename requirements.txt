@@ -1,2 +1,2 @@
 yt-dlp==2026.8.19
-curl_cffi==0.15.0
+curl_cffi==0.16.2
