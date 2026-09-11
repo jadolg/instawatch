@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+func handleServiceWorker(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript")
+	w.Header().Set("Service-Worker-Allowed", "/")
+	http.ServeFileFS(w, r, staticFiles, "static/sw.js")
+}
+
 type indexData struct {
 	Error           string
 	YtdlpVersion    string
