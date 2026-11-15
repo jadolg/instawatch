@@ -397,6 +397,15 @@ body {
     line-height: 1;
 }
 
+.back-link,
+.description-link,
+.copy-link-btn,
+.download-btn {
+    box-sizing: border-box;
+    height: 2.25rem;
+    line-height: 1;
+}
+
 .copy-toast {
     position: fixed;
     bottom: 1.5rem;
